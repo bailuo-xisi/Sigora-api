@@ -31,6 +31,24 @@ import { MOBILE_BREAKPOINT } from '../hooks/common/useIsMobile';
 const HTMLToastContent = ({ htmlContent }) => {
   return <div dangerouslySetInnerHTML={{ __html: htmlContent }} />;
 };
+const PUBLIC_SYSTEM_NAME =
+  import.meta.env.VITE_PUBLIC_SYSTEM_NAME?.trim() || '';
+export const DEFAULT_PUBLIC_SYSTEM_NAME = PUBLIC_SYSTEM_NAME || 'New API';
+
+const PUBLIC_LOGO = import.meta.env.VITE_PUBLIC_LOGO?.trim() || '';
+export const DEFAULT_PUBLIC_LOGO = PUBLIC_LOGO || '/logo.png';
+
+export function resolvePublicSystemName(systemName) {
+  const name = systemName?.trim();
+  if (!name) {
+    return DEFAULT_PUBLIC_SYSTEM_NAME;
+  }
+  if (PUBLIC_SYSTEM_NAME && name.toLowerCase() === 'new api') {
+    return PUBLIC_SYSTEM_NAME;
+  }
+  return name;
+}
+
 export default HTMLToastContent;
 export function isAdmin() {
   let user = localStorage.getItem('user');
@@ -48,13 +66,12 @@ export function isRoot() {
 
 export function getSystemName() {
   let system_name = localStorage.getItem('system_name');
-  if (!system_name) return 'New API';
-  return system_name;
+  return resolvePublicSystemName(system_name);
 }
 
 export function getLogo() {
   let logo = localStorage.getItem('logo');
-  if (!logo) return '/logo.png';
+  if (!logo) return DEFAULT_PUBLIC_LOGO;
   return logo;
 }
 

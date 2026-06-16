@@ -34,6 +34,7 @@ import '@/lib/dayjs'
 import { applyFaviconToDom } from '@/lib/dom-utils'
 import { initializeFrontendCache } from '@/lib/frontend-cache'
 import { handleServerError } from '@/lib/handle-server-error'
+import { DEFAULT_SYSTEM_NAME, resolvePublicSystemName } from '@/lib/constants'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
@@ -124,12 +125,13 @@ const rootElement = document.getElementById('root')!
       ) as HTMLMetaElement | null
       if (metaTitle) metaTitle.setAttribute('content', name)
     }
+    apply(DEFAULT_SYSTEM_NAME)
     // Cache-first
     try {
       const saved = localStorage.getItem('status')
       if (saved) {
         const s = JSON.parse(saved)
-        if (s?.system_name) apply(s.system_name)
+        if (s?.system_name) apply(resolvePublicSystemName(String(s.system_name)))
         if (s?.logo) applyFaviconToDom(s.logo)
       }
     } catch {
@@ -139,7 +141,7 @@ const rootElement = document.getElementById('root')!
     getStatus()
       .then((s) => {
         if (s?.system_name) {
-          apply(s.system_name as string)
+          apply(resolvePublicSystemName(String(s.system_name)))
           try {
             localStorage.setItem('status', JSON.stringify(s))
           } catch {

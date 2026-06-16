@@ -17,10 +17,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
+import { DEFAULT_PUBLIC_LOGO, resolvePublicSystemName } from './utils';
+
 export function setStatusData(data) {
+  const systemName = resolvePublicSystemName(data.system_name);
   localStorage.setItem('status', JSON.stringify(data));
-  localStorage.setItem('system_name', data.system_name);
-  localStorage.setItem('logo', data.logo);
+  localStorage.setItem('system_name', systemName);
+  localStorage.setItem('logo', data.logo || DEFAULT_PUBLIC_LOGO);
   localStorage.setItem('footer_html', data.footer_html);
   localStorage.setItem('quota_per_unit', data.quota_per_unit);
   // 兼容：保留旧字段，同时写入新的额度展示类型
@@ -53,6 +56,17 @@ export function setStatusData(data) {
     localStorage.setItem('docs_link', data.docs_link);
   } else {
     localStorage.removeItem('docs_link');
+  }
+
+  if (systemName) {
+    document.title = systemName;
+  }
+  const logo = data.logo || DEFAULT_PUBLIC_LOGO;
+  if (logo) {
+    const linkElement = document.querySelector("link[rel~='icon']");
+    if (linkElement) {
+      linkElement.href = logo;
+    }
   }
 }
 
