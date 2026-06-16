@@ -150,7 +150,7 @@ docker run --name new-api -d --restart always \
 
 ---
 
-🎉 部署完成后，访问 `http://localhost:3000` 即可使用！
+🎉 部署完成后，访问 `https://sigora.top` 即可使用！
 
 > [!WARNING]
 > 将本项目作为面向公众的生成式 AI 服务或 API 转售服务运营时，使用者应先完成备案、内容安全、实名、日志留存、税务、支付和上游授权等合规义务。

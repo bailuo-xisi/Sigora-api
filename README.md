@@ -150,7 +150,7 @@ docker run --name new-api -d --restart always \
 
 ---
 
-🎉 After deployment is complete, visit `http://localhost:3000` to start using!
+🎉 After deployment is complete, visit `https://sigora.top` to start using!
 
 > [!WARNING]
 > When operating this project as a public generative AI service or API resale service, users should first complete all required filing, licensing, content safety, real-name verification, log retention, tax, payment, and upstream authorization obligations.

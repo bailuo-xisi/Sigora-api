@@ -169,11 +169,9 @@ const Home = () => {
                   <h1
                     className={`text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-semi-color-text-0 leading-tight ${isChinese ? 'tracking-wide md:tracking-wider' : ''}`}
                   >
-                    <>
-                      {t('统一的')}
-                      <br />
-                      <span className='shine-text'>{t('大模型接口网关')}</span>
-                    </>
+                    <span className='sigora-yellow-art-text'>
+                      {t('菲比啾比')}
+                    </span>
                   </h1>
                   <p className='text-base md:text-lg lg:text-xl text-semi-color-text-1 mt-4 md:mt-6 max-w-xl'>
                     {t('多模型统一接入，只需将基址替换为：')}
