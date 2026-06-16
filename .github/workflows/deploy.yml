@@ -42,7 +42,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd ~/Sigora-api
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             gunzip -c sigora-api.tar.gz | docker load
             docker-compose down
             docker-compose up -d
