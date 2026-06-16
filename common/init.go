@@ -64,6 +64,8 @@ func InitEnv() {
 	if os.Getenv("SQLITE_PATH") != "" {
 		SQLitePath = os.Getenv("SQLITE_PATH")
 	}
+	PublicSystemName = strings.TrimSpace(GetEnvOrDefaultString("PUBLIC_SYSTEM_NAME", ""))
+	PublicLogo = strings.TrimSpace(GetEnvOrDefaultString("PUBLIC_LOGO", ""))
 	if *LogDir != "" {
 		var err error
 		*LogDir, err = filepath.Abs(*LogDir)

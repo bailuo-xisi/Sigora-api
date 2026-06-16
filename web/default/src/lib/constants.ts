@@ -21,8 +21,23 @@ For commercial licensing, please contact support@quantumnous.com
  */
 
 // System Configuration Defaults
-export const DEFAULT_SYSTEM_NAME = 'New API'
-export const DEFAULT_LOGO = '/logo.png'
+const PUBLIC_SYSTEM_NAME =
+  import.meta.env.VITE_PUBLIC_SYSTEM_NAME?.trim() || ''
+export const DEFAULT_SYSTEM_NAME = PUBLIC_SYSTEM_NAME || 'New API'
+
+const PUBLIC_LOGO = import.meta.env.VITE_PUBLIC_LOGO?.trim() || ''
+export const DEFAULT_LOGO = PUBLIC_LOGO || '/logo.png'
+
+export function resolvePublicSystemName(value?: string | null): string {
+  const systemName = value?.trim()
+  if (!systemName) {
+    return DEFAULT_SYSTEM_NAME
+  }
+  if (PUBLIC_SYSTEM_NAME && systemName.toLowerCase() === 'new api') {
+    return PUBLIC_SYSTEM_NAME
+  }
+  return systemName
+}
 
 // LocalStorage Keys
 export const STORAGE_KEYS = {

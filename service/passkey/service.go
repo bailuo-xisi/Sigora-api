@@ -31,7 +31,7 @@ func BuildWebAuthn(r *http.Request) (*webauthn.WebAuthn, error) {
 
 	displayName := strings.TrimSpace(settings.RPDisplayName)
 	if displayName == "" {
-		displayName = common.SystemName
+		displayName = common.GetPublicSystemName()
 	}
 
 	origins, err := resolveOrigins(r, settings)
