@@ -62,6 +62,7 @@ export default defineConfig(({ envMode }) => {
     },
     html: {
       template: './index.html',
+      favicon: './public/sigora-favicon-v2.ico',
     },
     server: {
       host: '0.0.0.0',

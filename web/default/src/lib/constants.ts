@@ -26,7 +26,7 @@ const PUBLIC_SYSTEM_NAME =
 export const DEFAULT_SYSTEM_NAME = PUBLIC_SYSTEM_NAME || 'New API'
 
 const PUBLIC_LOGO = import.meta.env.VITE_PUBLIC_LOGO?.trim() || ''
-export const DEFAULT_LOGO = PUBLIC_LOGO || '/logo.png'
+export const DEFAULT_LOGO = PUBLIC_LOGO || '/sigora-icon-v2.png'
 
 export function resolvePublicSystemName(value?: string | null): string {
   const systemName = value?.trim()
