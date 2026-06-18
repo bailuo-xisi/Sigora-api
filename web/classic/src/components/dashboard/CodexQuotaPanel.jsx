@@ -61,11 +61,11 @@ const getQuotaToneClass = (remaining) => {
   return 'text-gray-900';
 };
 
-const getQuotaBarClass = (remaining) => {
-  if (remaining === null || remaining === undefined) return 'bg-gray-300';
-  if (remaining <= 15) return 'bg-red-500';
-  if (remaining <= 35) return 'bg-amber-500';
-  return 'bg-emerald-500';
+const getQuotaBarColor = (remaining) => {
+  if (remaining === null || remaining === undefined) return '#cbd5e1';
+  if (remaining <= 15) return '#ef4444';
+  if (remaining <= 35) return '#f59e0b';
+  return '#10b981';
 };
 
 const CodexQuotaWindowRow = ({ quotaWindow, t }) => {
@@ -93,12 +93,16 @@ const CodexQuotaWindowRow = ({ quotaWindow, t }) => {
           )}
         </div>
       </div>
-      <div className='h-3 overflow-hidden rounded-full bg-gray-100'>
+      <div
+        className='h-3 overflow-hidden rounded-full'
+        style={{ backgroundColor: '#eef2f7' }}
+      >
         <div
-          className={`h-full rounded-full transition-all ${getQuotaBarClass(
-            remaining,
-          )}`}
-          style={{ width: `${remaining ?? 0}%` }}
+          className='h-full rounded-full transition-all'
+          style={{
+            width: `${remaining ?? 0}%`,
+            backgroundColor: getQuotaBarColor(remaining),
+          }}
         />
       </div>
       {!resetTime && (

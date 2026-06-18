@@ -506,6 +506,9 @@ func buildManagementCodexQuotaWindow(id string, window map[string]any, rateLimit
 	if used, ok := numberField(window, "used_percent", "usedPercent"); ok {
 		result.UsedPercent = common.GetPointer(clampPercent(used))
 	}
+	if remaining, ok := numberField(window, "remaining_percent", "remainingPercent"); ok {
+		result.RemainingPercent = common.GetPointer(clampPercent(remaining))
+	}
 
 	if resetAt, ok := resetAtField(window, now); ok {
 		result.ResetAt = &resetAt
@@ -518,7 +521,10 @@ func buildManagementCodexQuotaWindow(id string, window map[string]any, rateLimit
 			result.UsedPercent = common.GetPointer(float64(100))
 		}
 	}
-	if result.UsedPercent != nil {
+	if result.UsedPercent == nil && result.RemainingPercent != nil {
+		result.UsedPercent = common.GetPointer(clampPercent(100 - *result.RemainingPercent))
+	}
+	if result.RemainingPercent == nil && result.UsedPercent != nil {
 		result.RemainingPercent = common.GetPointer(clampPercent(100 - *result.UsedPercent))
 	}
 	return result

@@ -60,12 +60,11 @@ function getQuotaTone(remaining?: number | null) {
   return 'text-foreground'
 }
 
-function getQuotaBar(remaining?: number | null) {
-  if (remaining === null || remaining === undefined)
-    return 'bg-muted-foreground'
-  if (remaining <= 15) return 'bg-destructive'
-  if (remaining <= 35) return 'bg-warning'
-  return 'bg-emerald-500'
+function getQuotaBarColor(remaining?: number | null) {
+  if (remaining === null || remaining === undefined) return '#94a3b8'
+  if (remaining <= 15) return '#ef4444'
+  if (remaining <= 35) return '#f59e0b'
+  return '#10b981'
 }
 
 function CodexQuotaWindowRow(props: { window: CodexQuotaWindow }) {
@@ -104,11 +103,11 @@ function CodexQuotaWindowRow(props: { window: CodexQuotaWindow }) {
         aria-label={getQuotaWindowLabel(t, props.window)}
       >
         <div
-          className={cn(
-            'h-full rounded-full transition-all',
-            getQuotaBar(remaining)
-          )}
-          style={{ width: `${remaining ?? 0}%` }}
+          className='h-full rounded-full transition-all'
+          style={{
+            width: `${remaining ?? 0}%`,
+            backgroundColor: getQuotaBarColor(remaining),
+          }}
         />
       </div>
       {!resetTime ? (
