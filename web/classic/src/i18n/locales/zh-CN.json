@@ -3804,7 +3804,21 @@
     "并确认自行承担部署": "并确认自行承担部署",
     "运营和收费行为产生的法律责任": "运营和收费行为产生的法律责任",
     "，": "，",
-    "、": "、"
+    "、": "、",
+    "5-hour quota": "5 小时额度",
+    "Codex auth file": "Codex 认证文件",
+    "Codex quota": "Codex 额度",
+    "Codex quota not configured": "Codex 额度未配置",
+    "Codex quota unavailable": "Codex 额度不可用",
+    "Error": "错误",
+    "Monthly quota": "月额度",
+    "No Codex quota data": "暂无 Codex 额度数据",
+    "Quota": "额度",
+    "Quota unavailable": "额度不可用",
+    "Refresh": "刷新",
+    "Refreshes at {{time}}": "{{time}} 刷新",
+    "Reset time unavailable": "刷新时间未知",
+    "Weekly quota": "周额度"
   },
   "????": "????"
 }

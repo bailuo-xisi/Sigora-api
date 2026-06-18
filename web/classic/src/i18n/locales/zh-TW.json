@@ -3668,7 +3668,21 @@
     "并确认自行承担部署": "並確認自行承擔部署",
     "运营和收费行为产生的法律责任": "營運和收費行為產生的法律責任",
     "，": "，",
-    "、": "、"
+    "、": "、",
+    "5-hour quota": "5 小時額度",
+    "Codex auth file": "Codex 認證檔案",
+    "Codex quota": "Codex 額度",
+    "Codex quota not configured": "Codex 額度未設定",
+    "Codex quota unavailable": "Codex 額度不可用",
+    "Error": "錯誤",
+    "Monthly quota": "月額度",
+    "No Codex quota data": "暫無 Codex 額度資料",
+    "Quota": "額度",
+    "Quota unavailable": "額度不可用",
+    "Refresh": "重新整理",
+    "Refreshes at {{time}}": "{{time}} 重新整理",
+    "Reset time unavailable": "重新整理時間未知",
+    "Weekly quota": "週額度"
   },
   "????": "????"
 }

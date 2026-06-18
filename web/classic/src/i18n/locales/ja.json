@@ -3644,7 +3644,21 @@
     "并确认自行承担部署": "confirm that I bear legal responsibility arising from deployment",
     "运营和收费行为产生的法律责任": "operation and charging behavior",
     "，": ", ",
-    "、": ", "
+    "、": ", ",
+    "5-hour quota": "5時間クォータ",
+    "Codex auth file": "Codex 認証ファイル",
+    "Codex quota": "Codex クォータ",
+    "Codex quota not configured": "Codex クォータ未設定",
+    "Codex quota unavailable": "Codex クォータを取得できません",
+    "Error": "エラー",
+    "Monthly quota": "月間クォータ",
+    "No Codex quota data": "Codex クォータデータはありません",
+    "Quota": "クォータ",
+    "Quota unavailable": "クォータを取得できません",
+    "Refresh": "更新",
+    "Refreshes at {{time}}": "{{time}} に更新",
+    "Reset time unavailable": "リセット時刻は不明です",
+    "Weekly quota": "週間クォータ"
   },
   "????": "????"
 }

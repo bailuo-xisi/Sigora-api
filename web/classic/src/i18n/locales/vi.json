@@ -4209,7 +4209,21 @@
     "并确认自行承担部署": "confirm that I bear legal responsibility arising from deployment",
     "运营和收费行为产生的法律责任": "operation and charging behavior",
     "，": ", ",
-    "、": ", "
+    "、": ", ",
+    "5-hour quota": "Hạn mức 5 giờ",
+    "Codex auth file": "Tệp xác thực Codex",
+    "Codex quota": "Hạn mức Codex",
+    "Codex quota not configured": "Chưa cấu hình hạn mức Codex",
+    "Codex quota unavailable": "Không thể tải hạn mức Codex",
+    "Error": "Lỗi",
+    "Monthly quota": "Hạn mức tháng",
+    "No Codex quota data": "Chưa có dữ liệu hạn mức Codex",
+    "Quota": "Hạn mức",
+    "Quota unavailable": "Không thể tải hạn mức",
+    "Refresh": "Làm mới",
+    "Refreshes at {{time}}": "Làm mới lúc {{time}}",
+    "Reset time unavailable": "Không rõ thời gian đặt lại",
+    "Weekly quota": "Hạn mức tuần"
   },
   "????": "????"
 }

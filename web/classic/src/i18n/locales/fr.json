@@ -3675,7 +3675,21 @@
     "并确认自行承担部署": "confirm that I bear legal responsibility arising from deployment",
     "运营和收费行为产生的法律责任": "operation and charging behavior",
     "，": ", ",
-    "、": ", "
+    "、": ", ",
+    "5-hour quota": "Quota sur 5 heures",
+    "Codex auth file": "Fichier d'authentification Codex",
+    "Codex quota": "Quota Codex",
+    "Codex quota not configured": "Quota Codex non configuré",
+    "Codex quota unavailable": "Quota Codex indisponible",
+    "Error": "Erreur",
+    "Monthly quota": "Quota mensuel",
+    "No Codex quota data": "Aucune donnée de quota Codex",
+    "Quota": "Quota",
+    "Quota unavailable": "Quota indisponible",
+    "Refresh": "Actualiser",
+    "Refreshes at {{time}}": "Actualisation à {{time}}",
+    "Reset time unavailable": "Heure de réinitialisation indisponible",
+    "Weekly quota": "Quota hebdomadaire"
   },
   "????": "????"
 }

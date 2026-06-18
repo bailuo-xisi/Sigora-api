@@ -3695,7 +3695,21 @@
     "并确认自行承担部署": "confirm that I bear legal responsibility arising from deployment",
     "运营和收费行为产生的法律责任": "operation and charging behavior",
     "，": ", ",
-    "、": ", "
+    "、": ", ",
+    "5-hour quota": "Квота на 5 часов",
+    "Codex auth file": "Файл авторизации Codex",
+    "Codex quota": "Квота Codex",
+    "Codex quota not configured": "Квота Codex не настроена",
+    "Codex quota unavailable": "Квота Codex недоступна",
+    "Error": "Ошибка",
+    "Monthly quota": "Месячная квота",
+    "No Codex quota data": "Нет данных квоты Codex",
+    "Quota": "Квота",
+    "Quota unavailable": "Квота недоступна",
+    "Refresh": "Обновить",
+    "Refreshes at {{time}}": "Обновится в {{time}}",
+    "Reset time unavailable": "Время сброса недоступно",
+    "Weekly quota": "Недельная квота"
   },
   "????": "????"
 }

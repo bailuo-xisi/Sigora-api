@@ -26,6 +26,7 @@ import DashboardHeader from './DashboardHeader';
 import StatsCards from './StatsCards';
 import ChartsPanel from './ChartsPanel';
 import ApiInfoPanel from './ApiInfoPanel';
+import CodexQuotaPanel from './CodexQuotaPanel';
 import AnnouncementsPanel from './AnnouncementsPanel';
 import FaqPanel from './FaqPanel';
 import UptimePanel from './UptimePanel';
@@ -136,6 +137,8 @@ const Dashboard = () => {
     },
   );
   const faqData = statusState?.status?.faq || [];
+  const hasDashboardSidePanel =
+    dashboardData.hasApiInfoPanel || dashboardData.isAdminUser;
 
   const uptimeLegendData = Object.entries(UPTIME_STATUS_MAP).map(
     ([status, info]) => ({
@@ -185,7 +188,7 @@ const Dashboard = () => {
       {/* API信息和图表面板 */}
       <div className='mb-4'>
         <div
-          className={`grid grid-cols-1 gap-4 ${dashboardData.hasApiInfoPanel ? 'lg:grid-cols-4' : ''}`}
+          className={`grid grid-cols-1 gap-4 ${hasDashboardSidePanel ? 'lg:grid-cols-4' : ''}`}
         >
           <ChartsPanel
             activeChartTab={dashboardData.activeChartTab}
@@ -200,20 +203,32 @@ const Dashboard = () => {
             CARD_PROPS={CARD_PROPS}
             CHART_CONFIG={CHART_CONFIG}
             FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
-            hasApiInfoPanel={dashboardData.hasApiInfoPanel}
+            hasApiInfoPanel={hasDashboardSidePanel}
             t={dashboardData.t}
           />
 
-          {dashboardData.hasApiInfoPanel && (
-            <ApiInfoPanel
-              apiInfoData={apiInfoData}
-              handleCopyUrl={(url) => handleCopyUrl(url, dashboardData.t)}
-              handleSpeedTest={handleSpeedTest}
-              CARD_PROPS={CARD_PROPS}
-              FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
-              ILLUSTRATION_SIZE={ILLUSTRATION_SIZE}
-              t={dashboardData.t}
-            />
+          {hasDashboardSidePanel && (
+            <div className='flex flex-col gap-4'>
+              {dashboardData.isAdminUser && (
+                <CodexQuotaPanel
+                  CARD_PROPS={CARD_PROPS}
+                  FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
+                  t={dashboardData.t}
+                />
+              )}
+
+              {dashboardData.hasApiInfoPanel && (
+                <ApiInfoPanel
+                  apiInfoData={apiInfoData}
+                  handleCopyUrl={(url) => handleCopyUrl(url, dashboardData.t)}
+                  handleSpeedTest={handleSpeedTest}
+                  CARD_PROPS={CARD_PROPS}
+                  FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
+                  ILLUSTRATION_SIZE={ILLUSTRATION_SIZE}
+                  t={dashboardData.t}
+                />
+              )}
+            </div>
           )}
         </div>
       </div>

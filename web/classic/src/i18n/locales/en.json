@@ -3821,7 +3821,21 @@
     "并确认自行承担部署": "confirm that I bear legal responsibility arising from deployment",
     "运营和收费行为产生的法律责任": "operation and charging behavior",
     "，": ", ",
-    "、": ", "
+    "、": ", ",
+    "5-hour quota": "5-hour quota",
+    "Codex auth file": "Codex auth file",
+    "Codex quota": "Codex quota",
+    "Codex quota not configured": "Codex quota not configured",
+    "Codex quota unavailable": "Codex quota unavailable",
+    "Error": "Error",
+    "Monthly quota": "Monthly quota",
+    "No Codex quota data": "No Codex quota data",
+    "Quota": "Quota",
+    "Quota unavailable": "Quota unavailable",
+    "Refresh": "Refresh",
+    "Refreshes at {{time}}": "Refreshes at {{time}}",
+    "Reset time unavailable": "Reset time unavailable",
+    "Weekly quota": "Weekly quota"
   },
   "????": "????"
 }
