@@ -39,7 +39,7 @@ const Home = () => {
   const isMobile = useIsMobile();
   const serverAddress =
     statusState?.status?.server_address || `${window.location.origin}`;
-  const endpointPath = '/v1/responses';
+  const endpointPath = '/v1';
   const endpoint = `${serverAddress}${endpointPath}`;
 
   const displayHomePageContent = async () => {
