@@ -17,7 +17,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { api } from '@/lib/api'
-import type { QuotaDataItem, UptimeGroupResult } from './types'
+import type {
+  CodexQuotasResult,
+  QuotaDataItem,
+  UptimeGroupResult,
+} from './types'
 
 // ============================================================================
 // Dashboard APIs
@@ -43,6 +47,22 @@ export async function getUserQuotaDates(
     endpoint,
     { params }
   )
+  return res.data
+}
+
+export async function getCodexQuotas(): Promise<{
+  success: boolean
+  message?: string
+  data?: CodexQuotasResult
+}> {
+  const res = await api.get<{
+    success: boolean
+    message?: string
+    data?: CodexQuotasResult
+  }>('/api/external/codex-quotas', {
+    skipBusinessError: true,
+    skipErrorHandler: true,
+  })
   return res.data
 }
 

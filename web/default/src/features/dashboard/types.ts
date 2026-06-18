@@ -33,6 +33,34 @@ export interface QuotaDataItem {
   quota?: number
 }
 
+export interface CodexQuotaWindow {
+  id?: 'five-hour' | 'weekly' | 'monthly' | string
+  label?: string
+  window_seconds?: number | null
+  used_percent?: number | null
+  remaining_percent?: number | null
+  reset_label?: string
+  reset_at?: number | null
+}
+
+export interface CodexQuotaItem {
+  name: string
+  auth_index?: string
+  plan_type?: string
+  subscription_active_until?: string
+  rate_limit_reset_credits_available_count?: number | null
+  windows: CodexQuotaWindow[]
+  error?: string
+  error_status?: number
+  updated_at?: number
+}
+
+export interface CodexQuotasResult {
+  configured?: boolean
+  items: CodexQuotaItem[]
+  updated_at: number
+}
+
 // ============================================================================
 // Uptime Monitoring Types
 // ============================================================================

@@ -33,6 +33,7 @@ import { getUserQuotaDates } from '@/features/dashboard/api'
 import { useSummaryCardsConfig } from '@/features/dashboard/hooks/use-dashboard-config'
 import type { QuotaDataItem } from '@/features/dashboard/types'
 import { StatCard } from '../ui/stat-card'
+import { CodexQuotaOverview } from './codex-quota-overview'
 
 const SUMMARY_SPARKLINE_BUCKETS = 12
 
@@ -334,6 +335,8 @@ export function SummaryCards() {
               </div>
             </div>
           </div>
+
+          <CodexQuotaOverview />
 
           <Button className='justify-between' render={<Link to='/wallet' />}>
             <span>{t('Wallet')}</span>
