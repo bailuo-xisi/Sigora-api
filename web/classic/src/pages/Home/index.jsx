@@ -126,12 +126,7 @@ const Home = () => {
               </h1>
 
               <div className='classic-home-endpoint'>
-                <span className='classic-home-endpoint-base'>
-                  {serverAddress}
-                </span>
-                <span className='classic-home-endpoint-path'>
-                  {endpointPath}
-                </span>
+                <span className='classic-home-endpoint-url'>{endpoint}</span>
                 <Button
                   type='tertiary'
                   icon={<IconCopy />}
