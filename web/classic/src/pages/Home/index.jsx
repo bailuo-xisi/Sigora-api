@@ -18,25 +18,14 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React, { useContext, useEffect, useState } from 'react';
-import {
-  Button,
-  Input,
-  ScrollList,
-  ScrollItem,
-} from '@douyinfe/semi-ui';
+import { Button } from '@douyinfe/semi-ui';
 import { API, showError, copy, showSuccess } from '../../helpers';
 import { useIsMobile } from '../../hooks/common/useIsMobile';
-import { API_ENDPOINTS } from '../../constants/common.constant';
 import { StatusContext } from '../../context/Status';
 import { useActualTheme } from '../../context/Theme';
 import { marked } from 'marked';
 import { useTranslation } from 'react-i18next';
-import {
-  IconGithubLogo,
-  IconPlay,
-  IconFile,
-  IconCopy,
-} from '@douyinfe/semi-icons';
+import { IconPlay, IconFile, IconCopy } from '@douyinfe/semi-icons';
 import { Link } from 'react-router-dom';
 import NoticeModal from '../../components/layout/NoticeModal';
 
@@ -48,12 +37,10 @@ const Home = () => {
   const [homePageContent, setHomePageContent] = useState('');
   const [noticeVisible, setNoticeVisible] = useState(false);
   const isMobile = useIsMobile();
-  const isDemoSiteMode = statusState?.status?.demo_site_enabled || false;
   const serverAddress =
     statusState?.status?.server_address || `${window.location.origin}`;
-  const endpointItems = API_ENDPOINTS.map((e) => ({ value: e }));
-  const [endpointIndex, setEndpointIndex] = useState(0);
-  const isChinese = i18n.language.startsWith('zh');
+  const endpointPath = '/v1/responses';
+  const endpoint = `${serverAddress}${endpointPath}`;
 
   const displayHomePageContent = async () => {
     setHomePageContent(localStorage.getItem('home_page_content') || '');
@@ -67,7 +54,6 @@ const Home = () => {
       setHomePageContent(content);
       localStorage.setItem('home_page_content', content);
 
-      // 如果内容是 URL，则发送主题模式
       if (data.startsWith('https://')) {
         const iframe = document.querySelector('iframe');
         if (iframe) {
@@ -84,8 +70,8 @@ const Home = () => {
     setHomePageContentLoaded(true);
   };
 
-  const handleCopyBaseURL = async () => {
-    const ok = await copy(serverAddress);
+  const handleCopyEndpoint = async () => {
+    const ok = await copy(endpoint);
     if (ok) {
       showSuccess(t('已复制到剪切板'));
     }
@@ -115,117 +101,82 @@ const Home = () => {
     displayHomePageContent().then();
   }, []);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setEndpointIndex((prev) => (prev + 1) % endpointItems.length);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [endpointItems.length]);
-
   return (
-    <div className='classic-page-fill classic-home-page w-full overflow-x-hidden'>
+    <div className='classic-home-page w-full overflow-hidden'>
       <NoticeModal
         visible={noticeVisible}
         onClose={() => setNoticeVisible(false)}
         isMobile={isMobile}
       />
       {homePageContentLoaded && homePageContent === '' ? (
-        <div className='classic-home-default w-full overflow-x-hidden'>
-          {/* Banner 部分 */}
-          <div className='classic-home-hero w-full border-b border-semi-color-border relative overflow-x-hidden'>
-            {/* 背景模糊晕染球 */}
-            <div className='blur-ball blur-ball-indigo' />
-            <div className='blur-ball blur-ball-teal' />
-            <div className='flex items-center justify-center px-4 pt-24 pb-8'>
-              {/* 居中内容区 */}
-              <div className='flex flex-col items-center justify-center text-center max-w-4xl mx-auto'>
-                <div className='flex flex-col items-center justify-center mb-6 md:mb-8'>
-                  <h1
-                    className={`text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-semi-color-text-0 leading-tight ${isChinese ? 'tracking-wide md:tracking-wider' : ''}`}
-                  >
-                    <span className='sigora-yellow-art-text'>
-                      {t('菲比啾比')}
-                    </span>
-                  </h1>
-                  <p className='text-base md:text-lg lg:text-xl text-semi-color-text-1 mt-4 md:mt-6 max-w-xl'>
-                    {t('多模型统一接入，只需将基址替换为：')}
-                  </p>
-                  {/* BASE URL 与端点选择 */}
-                  <div className='flex flex-col md:flex-row items-center justify-center gap-4 w-full mt-4 md:mt-6 max-w-md'>
-                    <Input
-                      readonly
-                      value={serverAddress}
-                      className='flex-1 !rounded-full'
-                      size={isMobile ? 'default' : 'large'}
-                      suffix={
-                        <div className='flex items-center gap-2'>
-                          <ScrollList
-                            bodyHeight={32}
-                            style={{ border: 'unset', boxShadow: 'unset' }}
-                          >
-                            <ScrollItem
-                              mode='wheel'
-                              cycled={true}
-                              list={endpointItems}
-                              selectedIndex={endpointIndex}
-                              onSelect={({ index }) => setEndpointIndex(index)}
-                            />
-                          </ScrollList>
-                          <Button
-                            type='primary'
-                            onClick={handleCopyBaseURL}
-                            icon={<IconCopy />}
-                            className='!rounded-full'
-                          />
-                        </div>
-                      }
-                    />
-                  </div>
-                </div>
+        <section className='classic-home-hero w-full overflow-hidden'>
+          <img
+            aria-hidden
+            src='/sigora-hero-anime.jpg'
+            alt=''
+            className='classic-home-hero-image'
+          />
+          <div aria-hidden className='classic-home-hero-overlay' />
+          <div aria-hidden className='classic-home-hero-lines' />
 
-                {/* 操作按钮 */}
-                <div className='flex flex-row gap-4 justify-center items-center'>
-                  <Link to='/console'>
-                    <Button
-                      theme='solid'
-                      type='primary'
-                      size={isMobile ? 'default' : 'large'}
-                      className='!rounded-3xl px-8 py-2'
-                      icon={<IconPlay />}
-                    >
-                      {t('获取密钥')}
-                    </Button>
-                  </Link>
-                  {isDemoSiteMode && statusState?.status?.version ? (
-                    <Button
-                      size={isMobile ? 'default' : 'large'}
-                      className='flex items-center !rounded-3xl px-6 py-2'
-                      icon={<IconGithubLogo />}
-                      onClick={() =>
-                        window.open(
-                          'https://github.com/QuantumNous/new-api',
-                          '_blank',
-                        )
-                      }
-                    >
-                      {statusState.status.version}
-                    </Button>
-                  ) : (
-                    <Link to='/docs'>
-                      <Button
-                        size={isMobile ? 'default' : 'large'}
-                        className='flex items-center !rounded-3xl px-6 py-2'
-                        icon={<IconFile />}
-                      >
-                        {t('文档')}
-                      </Button>
-                    </Link>
-                  )}
-                </div>
+          <div className='classic-home-hero-inner'>
+            <div className='classic-home-hero-content'>
+              <div className='classic-home-badge'>
+                <span className='classic-home-badge-dot' />
+                <span>{t('人工智能应用基座')}</span>
+              </div>
+
+              <h1 className='classic-home-title'>
+                <span className='sigora-blue-art-text'>Sigora</span>
+              </h1>
+
+              <p className='classic-home-subtitle'>
+                {t(
+                  '通过统一、标准的接口协议接入海量模型。承载 AI 应用，高效管理数字资产，连接未来。',
+                )}
+              </p>
+
+              <div className='classic-home-endpoint'>
+                <span className='classic-home-endpoint-base'>
+                  {serverAddress}
+                </span>
+                <span className='classic-home-endpoint-path'>
+                  {endpointPath}
+                </span>
+                <Button
+                  type='tertiary'
+                  icon={<IconCopy />}
+                  onClick={handleCopyEndpoint}
+                  className='classic-home-copy-button'
+                  aria-label={t('复制')}
+                />
+              </div>
+
+              <div className='classic-home-actions'>
+                <Link to='/console'>
+                  <Button
+                    theme='solid'
+                    type='primary'
+                    size={isMobile ? 'default' : 'large'}
+                    className='classic-home-primary-button'
+                    icon={<IconPlay />}
+                  >
+                    {t('获取密钥')}
+                  </Button>
+                </Link>
+                <Link to='/docs'>
+                  <Button
+                    size={isMobile ? 'default' : 'large'}
+                    className='classic-home-secondary-button'
+                    icon={<IconFile />}
+                  >
+                    {t('文档')}
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
-        </div>
+        </section>
       ) : (
         <div className='classic-page-fill overflow-x-hidden w-full'>
           {homePageContent.startsWith('https://') ? (
