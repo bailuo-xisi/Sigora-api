@@ -121,20 +121,9 @@ const Home = () => {
 
           <div className='classic-home-hero-inner'>
             <div className='classic-home-hero-content'>
-              <div className='classic-home-badge'>
-                <span className='classic-home-badge-dot' />
-                <span>{t('人工智能应用基座')}</span>
-              </div>
-
               <h1 className='classic-home-title'>
                 <span className='sigora-blue-art-text'>Sigora</span>
               </h1>
-
-              <p className='classic-home-subtitle'>
-                {t(
-                  '通过统一、标准的接口协议接入海量模型。承载 AI 应用，高效管理数字资产，连接未来。',
-                )}
-              </p>
 
               <div className='classic-home-endpoint'>
                 <span className='classic-home-endpoint-base'>
