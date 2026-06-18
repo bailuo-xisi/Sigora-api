@@ -315,7 +315,7 @@ func SetApiRouter(router *gin.Engine) {
 		dataRoute.GET("/self", middleware.UserAuth(), controller.GetUserQuotaDates)
 
 		externalRoute := apiRouter.Group("/external")
-		externalRoute.GET("/codex-quotas", middleware.AdminAuth(), controller.GetExternalCodexQuotas)
+		externalRoute.GET("/codex-quotas", middleware.UserAuth(), controller.GetExternalCodexQuotas)
 
 		logRoute.Use(middleware.CORS(), middleware.CriticalRateLimit())
 		{

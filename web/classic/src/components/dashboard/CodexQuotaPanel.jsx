@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Skeleton, Tag } from '@douyinfe/semi-ui';
+import { Button, Card, Skeleton } from '@douyinfe/semi-ui';
 import { Gauge, RefreshCw } from 'lucide-react';
 import { API } from '../../helpers';
 import ScrollableContainer from '../common/ui/ScrollableContainer';
@@ -47,12 +47,6 @@ const formatResetTime = (value) => {
   }).format(new Date(value * 1000));
 };
 
-const formatPlanType = (planType) => {
-  const trimmed = planType?.trim();
-  if (!trimmed) return '';
-  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-};
-
 const getWindowLabel = (t, window) => {
   if (window.id === 'five-hour') return t('5-hour quota');
   if (window.id === 'weekly') return t('Weekly quota');
@@ -79,20 +73,27 @@ const CodexQuotaWindowRow = ({ quotaWindow, t }) => {
   const resetTime = formatResetTime(quotaWindow.reset_at);
 
   return (
-    <div className='space-y-1.5'>
-      <div className='flex items-center justify-between gap-2 text-xs'>
-        <span className='min-w-0 truncate font-medium text-gray-500'>
+    <div className='space-y-2'>
+      <div className='flex items-center justify-between gap-3 text-sm'>
+        <span className='min-w-0 truncate font-semibold text-gray-900'>
           {getWindowLabel(t, quotaWindow)}
         </span>
-        <span
-          className={`shrink-0 font-mono font-semibold tabular-nums ${getQuotaToneClass(
-            remaining,
-          )}`}
-        >
-          {formatPercent(remaining)}
-        </span>
+        <div className='flex shrink-0 items-center gap-2'>
+          <span
+            className={`font-mono font-semibold tabular-nums ${getQuotaToneClass(
+              remaining,
+            )}`}
+          >
+            {formatPercent(remaining)}
+          </span>
+          {resetTime && (
+            <span className='text-xs tabular-nums text-gray-400'>
+              {resetTime}
+            </span>
+          )}
+        </div>
       </div>
-      <div className='h-2 overflow-hidden rounded-full bg-gray-100'>
+      <div className='h-3 overflow-hidden rounded-full bg-gray-100'>
         <div
           className={`h-full rounded-full transition-all ${getQuotaBarClass(
             remaining,
@@ -100,34 +101,18 @@ const CodexQuotaWindowRow = ({ quotaWindow, t }) => {
           style={{ width: `${remaining ?? 0}%` }}
         />
       </div>
-      <div className='truncate text-[11px] text-gray-400'>
-        {resetTime
-          ? t('Refreshes at {{time}}', { time: resetTime })
-          : t('Reset time unavailable')}
-      </div>
+      {!resetTime && (
+        <div className='truncate text-[11px] text-gray-400'>
+          {t('Reset time unavailable')}
+        </div>
+      )}
     </div>
   );
 };
 
-const CodexQuotaItem = ({ item, t }) => {
-  const planType = formatPlanType(item.plan_type);
+const CodexQuotaItem = ({ item, itemIndex, t }) => {
   return (
     <div className='rounded-xl border border-gray-100 bg-white p-3 shadow-sm'>
-      <div className='mb-2 flex items-center justify-between gap-2'>
-        <span className='min-w-0 truncate text-sm font-semibold text-gray-900'>
-          {item.name || t('Codex auth file')}
-        </span>
-        {item.error ? (
-          <Tag color='red' shape='circle' size='small'>
-            {t('Error')}
-          </Tag>
-        ) : planType ? (
-          <Tag color='blue' shape='circle' size='small'>
-            {planType}
-          </Tag>
-        ) : null}
-      </div>
-
       {item.error ? (
         <div className='truncate text-xs text-red-500' title={item.error}>
           {t('Quota unavailable')}
@@ -137,7 +122,7 @@ const CodexQuotaItem = ({ item, t }) => {
         <div className='space-y-3'>
           {item.windows.map((quotaWindow) => (
             <CodexQuotaWindowRow
-              key={`${item.name}-${quotaWindow.id}`}
+              key={`${itemIndex}-${quotaWindow.id}`}
               quotaWindow={quotaWindow}
               t={t}
             />
@@ -235,10 +220,11 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
         ) : items.length > 0 ? (
           <ScrollableContainer maxHeight='20rem'>
             <div className='space-y-3'>
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <CodexQuotaItem
-                  key={`${item.name}-${item.auth_index}`}
+                  key={index}
                   item={item}
+                  itemIndex={index}
                   t={t}
                 />
               ))}

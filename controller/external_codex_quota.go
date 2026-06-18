@@ -13,5 +13,22 @@ func GetExternalCodexQuotas(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	if c.GetInt("role") < common.RoleAdminUser {
+		summary = sanitizeExternalCodexQuotas(summary)
+	}
 	common.ApiSuccess(c, summary)
+}
+
+func sanitizeExternalCodexQuotas(summary *service.ManagementCodexQuotas) *service.ManagementCodexQuotas {
+	if summary == nil {
+		return nil
+	}
+	sanitized := *summary
+	sanitized.Items = make([]service.ManagementCodexQuotaItem, len(summary.Items))
+	for index, item := range summary.Items {
+		item.Name = ""
+		item.AuthIndex = ""
+		sanitized.Items[index] = item
+	}
+	return &sanitized
 }

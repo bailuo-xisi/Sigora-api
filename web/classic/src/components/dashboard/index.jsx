@@ -137,8 +137,7 @@ const Dashboard = () => {
     },
   );
   const faqData = statusState?.status?.faq || [];
-  const hasDashboardSidePanel =
-    dashboardData.hasApiInfoPanel || dashboardData.isAdminUser;
+  const hasDashboardSidePanel = true;
 
   const uptimeLegendData = Object.entries(UPTIME_STATUS_MAP).map(
     ([status, info]) => ({
@@ -209,13 +208,11 @@ const Dashboard = () => {
 
           {hasDashboardSidePanel && (
             <div className='flex flex-col gap-4'>
-              {dashboardData.isAdminUser && (
-                <CodexQuotaPanel
-                  CARD_PROPS={CARD_PROPS}
-                  FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
-                  t={dashboardData.t}
-                />
-              )}
+              <CodexQuotaPanel
+                CARD_PROPS={CARD_PROPS}
+                FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
+                t={dashboardData.t}
+              />
 
               {dashboardData.hasApiInfoPanel && (
                 <ApiInfoPanel

@@ -22,7 +22,6 @@ import { Gauge } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getCodexQuotas } from '@/features/dashboard/api'
 import type {
@@ -53,12 +52,6 @@ function formatResetTime(value?: number | null) {
   }).format(new Date(value * 1000))
 }
 
-function formatPlanType(planType?: string) {
-  const trimmed = planType?.trim()
-  if (!trimmed) return ''
-  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
-}
-
 function getQuotaTone(remaining?: number | null) {
   if (remaining === null || remaining === undefined)
     return 'text-muted-foreground'
@@ -67,60 +60,74 @@ function getQuotaTone(remaining?: number | null) {
   return 'text-foreground'
 }
 
+function getQuotaBar(remaining?: number | null) {
+  if (remaining === null || remaining === undefined)
+    return 'bg-muted-foreground'
+  if (remaining <= 15) return 'bg-destructive'
+  if (remaining <= 35) return 'bg-warning'
+  return 'bg-emerald-500'
+}
+
 function CodexQuotaWindowRow(props: { window: CodexQuotaWindow }) {
   const { t } = useTranslation()
-  const remaining = props.window.remaining_percent
+  const remaining =
+    props.window.remaining_percent === null ||
+    props.window.remaining_percent === undefined
+      ? null
+      : Math.max(0, Math.min(100, props.window.remaining_percent))
   const resetTime = formatResetTime(props.window.reset_at)
 
   return (
-    <div className='flex flex-col gap-1.5'>
-      <div className='flex items-center justify-between gap-2 text-xs'>
-        <span className='text-muted-foreground truncate font-medium'>
+    <div className='flex flex-col gap-2'>
+      <div className='flex items-center justify-between gap-3 text-xs'>
+        <span className='text-foreground truncate font-semibold'>
           {getQuotaWindowLabel(t, props.window)}
         </span>
-        <span
-          className={cn(
-            'shrink-0 font-mono font-semibold tabular-nums',
-            getQuotaTone(remaining)
-          )}
-        >
-          {formatQuotaPercent(remaining)}
-        </span>
+        <div className='flex shrink-0 items-center gap-1.5'>
+          <span
+            className={cn(
+              'font-mono font-semibold tabular-nums',
+              getQuotaTone(remaining)
+            )}
+          >
+            {formatQuotaPercent(remaining)}
+          </span>
+          {resetTime ? (
+            <span className='text-muted-foreground text-[11px] tabular-nums'>
+              {resetTime}
+            </span>
+          ) : null}
+        </div>
       </div>
-      <Progress
-        value={remaining ?? 0}
-        className='gap-1'
+      <div
+        className='bg-muted h-2.5 overflow-hidden rounded-full'
         aria-label={getQuotaWindowLabel(t, props.window)}
-      />
-      <div className='text-muted-foreground truncate text-[11px]'>
-        {resetTime
-          ? t('Refreshes at {{time}}', { time: resetTime })
-          : t('Reset time unavailable')}
+      >
+        <div
+          className={cn(
+            'h-full rounded-full transition-all',
+            getQuotaBar(remaining)
+          )}
+          style={{ width: `${remaining ?? 0}%` }}
+        />
       </div>
+      {!resetTime ? (
+        <div className='text-muted-foreground truncate text-[11px]'>
+          {t('Reset time unavailable')}
+        </div>
+      ) : null}
     </div>
   )
 }
 
-function CodexQuotaItemView(props: { item: CodexQuotaItem }) {
+function CodexQuotaItemView(props: {
+  item: CodexQuotaItem
+  itemIndex: number
+}) {
   const { t } = useTranslation()
-  const planType = formatPlanType(props.item.plan_type)
 
   return (
     <div className='border-border/70 flex flex-col gap-2 rounded-lg border px-2.5 py-2'>
-      <div className='flex items-center justify-between gap-2'>
-        <span
-          className='min-w-0 truncate text-xs font-semibold'
-          title={props.item.name}
-        >
-          {props.item.name}
-        </span>
-        {planType ? (
-          <Badge variant='secondary' className='shrink-0'>
-            {planType}
-          </Badge>
-        ) : null}
-      </div>
-
       {props.item.error ? (
         <div className='text-destructive truncate text-xs'>
           {t('Quota unavailable')}
@@ -129,7 +136,7 @@ function CodexQuotaItemView(props: { item: CodexQuotaItem }) {
         <div className='flex flex-col gap-2'>
           {props.item.windows.map((window) => (
             <CodexQuotaWindowRow
-              key={`${props.item.name}-${window.id}`}
+              key={`${props.itemIndex}-${window.id}`}
               window={window}
             />
           ))}
@@ -196,11 +203,8 @@ export function CodexQuotaOverview() {
         </div>
       ) : items.length > 0 ? (
         <div className='flex max-h-64 flex-col gap-2 overflow-y-auto pr-1'>
-          {items.map((item) => (
-            <CodexQuotaItemView
-              key={`${item.name}-${item.auth_index}`}
-              item={item}
-            />
+          {items.map((item, index) => (
+            <CodexQuotaItemView key={index} item={item} itemIndex={index} />
           ))}
         </div>
       ) : (
