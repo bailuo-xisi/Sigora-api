@@ -273,6 +273,8 @@ export function timestamp2string1(
       ? nextWeekYear + '-' + nextMonth + '-' + nextDay
       : nextMonth + '-' + nextDay;
     str += ' - ' + nextStr;
+  } else if (dataExportDefaultTime === 'month') {
+    str = year + '-' + month;
   }
   return str;
 }

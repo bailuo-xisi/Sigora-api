@@ -35,6 +35,7 @@ export default function DataDashboard(props) {
     { key: 'hour', label: t('小时'), value: 'hour' },
     { key: 'day', label: t('天'), value: 'day' },
     { key: 'week', label: t('周'), value: 'week' },
+    { key: 'month', label: t('月'), value: 'month' },
   ];
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({

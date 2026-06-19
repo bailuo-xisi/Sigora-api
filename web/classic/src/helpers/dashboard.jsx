@@ -57,6 +57,8 @@ export const getInitialTimestamp = () => {
       return timestamp2string(now - 86400);
     case 'week':
       return timestamp2string(now - 86400 * 30);
+    case 'month':
+      return timestamp2string(now - 86400 * 365);
     default:
       return timestamp2string(now - 86400 * 7);
   }
