@@ -34,7 +34,12 @@ import type {
 } from '@/features/dashboard/types'
 
 function isTimeGranularity(value: unknown): value is TimeGranularity {
-  return value === 'hour' || value === 'day' || value === 'week'
+  return (
+    value === 'hour' ||
+    value === 'day' ||
+    value === 'week' ||
+    value === 'month'
+  )
 }
 
 function getLegacySavedGranularity(): TimeGranularity {

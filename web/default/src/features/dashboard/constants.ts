@@ -35,12 +35,14 @@ export const TIME_RANGE_BY_GRANULARITY = {
   hour: 1,
   day: 7,
   week: 30,
+  month: 365,
 } as const
 
 export const TIME_GRANULARITY_OPTIONS = [
   { label: 'Hour', value: 'hour' },
   { label: 'Day', value: 'day' },
   { label: 'Week', value: 'week' },
+  { label: 'Month', value: 'month' },
 ] as const
 
 export const TIME_RANGE_PRESETS = [
