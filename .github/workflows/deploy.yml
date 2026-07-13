@@ -51,6 +51,7 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             docker pull ghcr.io/bailuo-xisi/sigora-api:latest
-            docker-compose down
-            docker-compose up -d
+            docker image inspect ghcr.io/bailuo-xisi/sigora-api:latest --format 'Pulled image: {{index .RepoDigests 0}}'
+            docker-compose pull new-api || true
+            docker-compose up -d --force-recreate new-api
             docker image prune -f
