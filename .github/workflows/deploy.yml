@@ -51,25 +51,6 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             docker pull ghcr.io/bailuo-xisi/sigora-api:latest
-            docker image inspect ghcr.io/bailuo-xisi/sigora-api:latest --format 'Pulled image: {{index .RepoDigests 0}}'
-            docker-compose pull new-api || true
-            docker-compose up -d --force-recreate
-
-            healthy=false
-            for attempt in $(seq 1 24); do
-              if [ "$(docker inspect --format '{{.State.Health.Status}}' new-api 2>/dev/null)" = "healthy" ]; then
-                echo "Deployment healthy"
-                healthy=true
-                break
-              fi
-              echo "Waiting for service health ($attempt/24)"
-              sleep 5
-            done
-
-            if [ "$healthy" != "true" ]; then
-              docker-compose ps
-              docker-compose logs --tail=200 new-api
-              exit 1
-            fi
-
+            docker-compose down
+            docker-compose up -d
             docker image prune -f
