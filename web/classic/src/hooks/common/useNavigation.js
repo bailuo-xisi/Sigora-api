@@ -55,6 +55,11 @@ export const useNavigation = (t, headerNavModules) => {
         to: '/docs',
       },
       {
+        text: t('Codex 雷达'),
+        itemKey: 'codexRadar',
+        to: '/codex-radar',
+      },
+      {
         text: t('关于'),
         itemKey: 'about',
         to: '/about',
@@ -64,6 +69,9 @@ export const useNavigation = (t, headerNavModules) => {
     // 根据配置过滤导航链接
     return allLinks.filter((link) => {
       if (link.itemKey === 'docs') {
+        return modules.docs;
+      }
+      if (link.itemKey === 'codexRadar') {
         return modules.docs;
       }
       if (link.itemKey === 'pricing') {
