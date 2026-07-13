@@ -94,6 +94,56 @@ function getToneClass(status) {
   return 'text-blue-600';
 }
 
+function getModelIqComparisons(modelIq) {
+  const primaryLatest =
+    modelIq?.latest && typeof modelIq.latest === 'object' ? modelIq.latest : {};
+  const primaryRecentDays = Array.isArray(modelIq?.recent_days)
+    ? modelIq.recent_days
+    : [];
+  const primaryLabel =
+    [primaryLatest.model, primaryLatest.reasoning_effort]
+      .filter(Boolean)
+      .join(' ') || '--';
+  const items = [
+    {
+      key: 'primary',
+      label: primaryLatest.label || primaryLabel,
+      model: primaryLatest.model,
+      reasoning_effort: primaryLatest.reasoning_effort,
+      latest: primaryLatest,
+      recent_days: primaryRecentDays,
+    },
+  ];
+
+  if (
+    modelIq?.comparisons &&
+    typeof modelIq.comparisons === 'object' &&
+    !Array.isArray(modelIq.comparisons)
+  ) {
+    Object.entries(modelIq.comparisons).forEach(([key, comparison]) => {
+      if (!comparison || typeof comparison !== 'object') return;
+
+      const latest =
+        comparison.latest && typeof comparison.latest === 'object'
+          ? comparison.latest
+          : {};
+      items.push({
+        key,
+        label: comparison.label || latest.label || key,
+        model: comparison.model || latest.model,
+        reasoning_effort:
+          comparison.reasoning_effort || latest.reasoning_effort,
+        latest,
+        recent_days: Array.isArray(comparison.recent_days)
+          ? comparison.recent_days
+          : [],
+      });
+    });
+  }
+
+  return items;
+}
+
 function MetricCard({ label, value, detail, tone }) {
   return (
     <div className='rounded-2xl border border-semi-color-border bg-semi-color-bg-1 p-4 shadow-sm'>
@@ -167,7 +217,8 @@ const CodexRadar = () => {
   const { t, i18n } = useTranslation();
   const { data, error, loading } = useCodexRadarSummary();
   const isZh = i18n.language.toLowerCase().startsWith('zh');
-  const latest = data?.model_iq?.latest;
+  const primaryLatest = data?.model_iq?.latest;
+  const [selectedModelKey, setSelectedModelKey] = useState('primary');
   const quotaRadar = data?.model_iq?.quota_radar;
   const quotaCheck = data?.model_iq?.quota_check;
   const tiboPresence = data?.tibo_presence;
@@ -180,12 +231,31 @@ const CodexRadar = () => {
   const tiboLocation = isZh
     ? tiboPresence?.location_label_zh || tiboPresence?.location_label_en
     : tiboPresence?.location_label_en || tiboPresence?.location_label_zh;
-  const recentDays = useMemo(
+  const modelIqItems = useMemo(
+    () => getModelIqComparisons(data?.model_iq),
+    [data?.model_iq],
+  );
+  useEffect(() => {
+    if (!modelIqItems.some((item) => item.key === selectedModelKey)) {
+      setSelectedModelKey(modelIqItems[0]?.key || 'primary');
+    }
+  }, [modelIqItems, selectedModelKey]);
+  const selectedModel = useMemo(
     () =>
-      Array.isArray(data?.model_iq?.recent_days)
-        ? data.model_iq.recent_days.slice(-6).reverse()
+      modelIqItems.find((item) => item.key === selectedModelKey) ||
+      modelIqItems[0],
+    [modelIqItems, selectedModelKey],
+  );
+  const selectedLatest = useMemo(
+    () => selectedModel?.latest || {},
+    [selectedModel],
+  );
+  const selectedRecentDays = useMemo(
+    () =>
+      Array.isArray(selectedModel?.recent_days)
+        ? selectedModel.recent_days.slice(-6).reverse()
         : [],
-    [data?.model_iq?.recent_days],
+    [selectedModel],
   );
   const attribution =
     data?.api_access?.requirements?.attribution_text ||
@@ -271,13 +341,19 @@ const CodexRadar = () => {
           />
           <MetricCard
             label={t('最新 IQ 分数')}
-            value={latest?.score === undefined ? '--' : String(latest.score)}
+            value={
+              primaryLatest?.score === undefined
+                ? '--'
+                : String(primaryLatest.score)
+            }
             detail={
-              latest
-                ? `${latest.passed ?? '--'}/${latest.tasks ?? '--'} ${t('通过')}`
+              primaryLatest
+                ? `${primaryLatest.passed ?? '--'}/${primaryLatest.tasks ?? '--'} ${t('通过')}`
                 : '--'
             }
-            tone={latest?.status === 'green' ? 'text-green-600' : undefined}
+            tone={
+              primaryLatest?.status === 'green' ? 'text-green-600' : undefined
+            }
           />
         </div>
 
@@ -335,27 +411,92 @@ const CodexRadar = () => {
           <SectionCard
             title={t('模型 IQ')}
             action={
-              <Tag className={getToneClass(latest?.status)}>
-                {latest?.status || '--'}
+              <Tag className={getToneClass(selectedLatest?.status)}>
+                {selectedLatest?.status || '--'}
               </Tag>
             }
           >
+            <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-3'>
+              {modelIqItems.map((item) => {
+                const itemLatest = item.latest || {};
+                const isSelected = item.key === selectedModelKey;
+                return (
+                  <button
+                    key={item.key}
+                    type='button'
+                    aria-pressed={isSelected}
+                    title={item.label || item.key}
+                    onClick={() => setSelectedModelKey(item.key)}
+                    className={`rounded-2xl border p-4 text-left shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/30'
+                        : 'border-semi-color-border bg-semi-color-bg-1 hover:border-blue-300'
+                    }`}
+                  >
+                    <div className='flex items-start justify-between gap-2'>
+                      <div className='min-w-0 truncate font-semibold'>
+                        {item.label || item.key}
+                      </div>
+                      <Tag className={getToneClass(itemLatest.status)}>
+                        {itemLatest.status || '--'}
+                      </Tag>
+                    </div>
+                    <div className='mt-2 truncate text-sm text-semi-color-secondary'>
+                      {item.model || itemLatest.model || '--'}
+                    </div>
+                    <div className='mt-3 flex items-end justify-between gap-3'>
+                      <div className='min-w-0'>
+                        <div className='text-xs text-semi-color-tertiary'>
+                          {t('Reasoning Effort')}
+                        </div>
+                        <div className='truncate text-sm font-medium'>
+                          {item.reasoning_effort ||
+                            itemLatest.reasoning_effort ||
+                            '--'}
+                        </div>
+                      </div>
+                      <div className='text-right'>
+                        <div className='text-xs text-semi-color-tertiary'>
+                          IQ
+                        </div>
+                        <div className='font-mono text-2xl font-semibold'>
+                          {itemLatest.score ?? '--'}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
             <div className='grid gap-3 md:grid-cols-3'>
-              <MetricCard label={t('模型')} value={latest?.model || '--'} />
+              <MetricCard
+                label={t('模型')}
+                value={selectedLatest?.model || selectedModel?.model || '--'}
+              />
               <MetricCard
                 label={t('令牌')}
-                value={formatNumber(latest?.total_tokens)}
+                value={formatNumber(selectedLatest?.total_tokens)}
               />
               <MetricCard
                 label={t('成本')}
-                value={formatUsd(latest?.cost_usd)}
+                value={formatUsd(selectedLatest?.cost_usd)}
+              />
+            </div>
+            <div className='mt-3'>
+              <MetricCard
+                label={t('Reasoning Effort')}
+                value={
+                  selectedLatest?.reasoning_effort ||
+                  selectedModel?.reasoning_effort ||
+                  '--'
+                }
               />
             </div>
             <div className='mt-4 space-y-2'>
-              {recentDays.length > 0 ? (
-                recentDays.map((item) => (
+              {selectedRecentDays.length > 0 ? (
+                selectedRecentDays.map((item, index) => (
                   <div
-                    key={item.date}
+                    key={`${selectedModel?.key || 'primary'}-${item.date || 'unknown'}-${index}`}
                     className='grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-xl border border-semi-color-border px-3 py-2 text-sm'
                   >
                     <div className='min-w-0'>
@@ -366,7 +507,9 @@ const CodexRadar = () => {
                         {item.wall_time_human || '--'}
                       </div>
                     </div>
-                    <Tag>{item.status || '--'}</Tag>
+                    <Tag className={getToneClass(item.status)}>
+                      {item.status || '--'}
+                    </Tag>
                     <div className='font-mono font-semibold'>
                       {item.score ?? '--'}
                     </div>
