@@ -58,6 +58,24 @@ function formatUsd(value) {
   }).format(value);
 }
 
+function formatQuotaTrend(value) {
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value);
+  }
+  if (!Array.isArray(value) || value.length === 0) return '--';
+
+  const latestPoint = value[value.length - 1];
+  if (!latestPoint || typeof latestPoint !== 'object') {
+    return String(value.length);
+  }
+
+  const date = latestPoint.date || '--';
+  const rate = Number(latestPoint.rate);
+  return Number.isFinite(rate)
+    ? `${date} · ${formatUsd(rate)}/1%`
+    : String(date);
+}
+
 function getToneClass(status) {
   const normalized = String(status || '').toLowerCase();
   if (
@@ -163,7 +181,10 @@ const CodexRadar = () => {
     ? tiboPresence?.location_label_zh || tiboPresence?.location_label_en
     : tiboPresence?.location_label_en || tiboPresence?.location_label_zh;
   const recentDays = useMemo(
-    () => (data?.model_iq?.recent_days || []).slice(-6).reverse(),
+    () =>
+      Array.isArray(data?.model_iq?.recent_days)
+        ? data.model_iq.recent_days.slice(-6).reverse()
+        : [],
     [data?.model_iq?.recent_days],
   );
   const attribution =
@@ -365,7 +386,10 @@ const CodexRadar = () => {
                 label={t('基准窗口')}
                 value={quotaRadar?.basis_window_label || '--'}
               />
-              <MetricCard label={t('趋势')} value={quotaRadar?.trend || '--'} />
+              <MetricCard
+                label={t('趋势')}
+                value={formatQuotaTrend(quotaRadar?.trend)}
+              />
               <MetricCard
                 label={t('额度检查')}
                 value={quotaCheck?.status || '--'}

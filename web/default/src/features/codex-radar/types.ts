@@ -83,7 +83,14 @@ export type CodexRadarQuotaRadar = {
   adjusted_delta?: number
   raw_delta?: number
   rate?: number
-  trend?: string
+  trend?:
+    | string
+    | Array<{
+        date?: string
+        rate?: number
+        basis_window_label?: string
+        adjusted_delta?: number
+      }>
 }
 
 export type CodexRadarQuotaCheck = {

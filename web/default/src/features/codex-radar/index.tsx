@@ -38,7 +38,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PublicLayout } from '@/components/layout'
 import { CODEX_RADAR_SUMMARY_URL, getCodexRadarSummary } from './api'
-import type { CodexRadarModelIqLatest } from './types'
+import type { CodexRadarModelIqLatest, CodexRadarQuotaRadar } from './types'
 
 const ORIGINAL_SITE_URL = 'https://codexradar.com/'
 const FIVE_MINUTES = 5 * 60 * 1000
@@ -73,6 +73,17 @@ function formatUsd(value?: number | null) {
     currency: 'USD',
     maximumFractionDigits: 2,
   }).format(value)
+}
+
+function formatQuotaTrend(value?: CodexRadarQuotaRadar['trend']) {
+  if (typeof value === 'string') return value
+  if (!Array.isArray(value) || value.length === 0) return '--'
+
+  const latestPoint = value[value.length - 1]
+  const date = latestPoint?.date || '--'
+  return typeof latestPoint?.rate === 'number'
+    ? `${date} · ${formatUsd(latestPoint.rate)}/1%`
+    : date
 }
 
 function getToneClass(status?: string) {
@@ -216,7 +227,10 @@ export function CodexRadarPage() {
   const statusLabel = data?.window?.open ? t('Window open') : t('Window closed')
   const recommendedAction = data?.recommended_action || data?.window?.action
   const recentDays = useMemo(
-    () => (data?.model_iq?.recent_days || []).slice(-6).reverse(),
+    () =>
+      Array.isArray(data?.model_iq?.recent_days)
+        ? data.model_iq.recent_days.slice(-6).reverse()
+        : [],
     [data?.model_iq?.recent_days]
   )
 
@@ -474,7 +488,7 @@ export function CodexRadarPage() {
                     {t('Trend')}
                   </div>
                   <div className='mt-1 font-semibold'>
-                    {quotaRadar?.trend || '--'}
+                    {formatQuotaTrend(quotaRadar?.trend)}
                   </div>
                 </div>
                 <div className='rounded-xl border p-3'>
