@@ -94,6 +94,41 @@ function getToneClass(status) {
   return 'text-blue-600';
 }
 
+function getScoreToneClass(status) {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized.includes('green')) return 'text-green-600';
+  if (normalized.includes('red')) return 'text-red-600';
+  if (normalized.includes('yellow') || normalized.includes('amber')) {
+    return 'text-yellow-600';
+  }
+  return 'text-blue-600';
+}
+
+function titleCase(value) {
+  if (!value) return '';
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function getModelFamilyLabel(model, label) {
+  const source = model || label || '';
+  const known = ['sol', 'terra', 'luna', 'opus', 'sonnet', 'haiku'];
+  const parts = source.toLowerCase().split(/[\s_-]+/).filter(Boolean);
+  const knownPart = parts.find((part) => known.includes(part));
+  if (knownPart) return titleCase(knownPart);
+
+  const withoutVersion = source
+    .replace(/^gpt[-_ ]?5(?:[._-]?6|[._-]?5)?[-_ ]?/i, '')
+    .trim();
+  if (withoutVersion) return titleCase(withoutVersion.split(/[\s_-]+/)[0]);
+  return source || '--';
+}
+
+function getModelIqDisplayLabel(item) {
+  const effort = item.reasoning_effort || item.latest?.reasoning_effort;
+  const family = getModelFamilyLabel(item.model || item.latest?.model, item.label);
+  return [family, effort].filter(Boolean).join(' ') || item.label || item.key;
+}
+
 function getModelIqComparisons(modelIq) {
   const primaryLatest =
     modelIq?.latest && typeof modelIq.latest === 'object' ? modelIq.latest : {};
@@ -420,48 +455,55 @@ const CodexRadar = () => {
               {modelIqItems.map((item) => {
                 const itemLatest = item.latest || {};
                 const isSelected = item.key === selectedModelKey;
+                const displayLabel = getModelIqDisplayLabel(item);
                 return (
                   <button
                     key={item.key}
                     type='button'
                     aria-pressed={isSelected}
-                    title={item.label || item.key}
+                    title={item.label || displayLabel}
                     onClick={() => setSelectedModelKey(item.key)}
                     className={`rounded-2xl border p-4 text-left shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                       isSelected
-                        ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/30'
+                        ? 'border-blue-500 bg-blue-50/70 shadow-md ring-4 ring-blue-500/10 dark:bg-blue-950/30'
                         : 'border-semi-color-border bg-semi-color-bg-1 hover:border-blue-300'
                     }`}
                   >
-                    <div className='flex items-start justify-between gap-2'>
-                      <div className='min-w-0 truncate font-semibold'>
-                        {item.label || item.key}
-                      </div>
-                      <Tag className={getToneClass(itemLatest.status)}>
-                        {itemLatest.status || '--'}
-                      </Tag>
-                    </div>
-                    <div className='mt-2 truncate text-sm text-semi-color-secondary'>
-                      {item.model || itemLatest.model || '--'}
-                    </div>
-                    <div className='mt-3 flex items-end justify-between gap-3'>
+                    <div className='flex min-h-12 items-start justify-between gap-3'>
                       <div className='min-w-0'>
-                        <div className='text-xs text-semi-color-tertiary'>
-                          {t('Reasoning Effort')}
+                        <div className='text-base font-semibold leading-5 break-words'>
+                          {displayLabel}
                         </div>
-                        <div className='truncate text-sm font-medium'>
-                          {item.reasoning_effort ||
-                            itemLatest.reasoning_effort ||
-                            '--'}
+                        <div className='mt-1 break-all text-xs text-semi-color-secondary'>
+                          {item.model || itemLatest.model || '--'}
                         </div>
+                      </div>
+                      <div
+                        className={`font-mono text-3xl font-semibold ${getScoreToneClass(
+                          itemLatest.status,
+                        )}`}
+                      >
+                        {itemLatest.score ?? '--'}
+                      </div>
+                    </div>
+                    <div className='mt-4 grid grid-cols-3 gap-2 text-xs text-semi-color-tertiary'>
+                      <div>
+                        <div className='font-medium'>
+                          {itemLatest.passed ?? '--'}/{itemLatest.tasks ?? '--'}
+                        </div>
+                        <div>{t('passed')}</div>
+                      </div>
+                      <div>
+                        <div className='font-medium'>
+                          {formatUsd(itemLatest.cost_usd)}
+                        </div>
+                        <div>{formatNumber(itemLatest.total_tokens)}</div>
                       </div>
                       <div className='text-right'>
-                        <div className='text-xs text-semi-color-tertiary'>
-                          IQ
+                        <div className='font-medium'>
+                          {itemLatest.wall_time_human || '--'}
                         </div>
-                        <div className='font-mono text-2xl font-semibold'>
-                          {itemLatest.score ?? '--'}
-                        </div>
+                        <div>{itemLatest.status || '--'}</div>
                       </div>
                     </div>
                   </button>

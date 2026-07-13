@@ -55,6 +55,7 @@ export type CodexRadarTiboPresence = {
 }
 
 export type CodexRadarModelIqLatest = {
+  label?: string
   date?: string
   score?: number
   status?: string
@@ -71,6 +72,14 @@ export type CodexRadarModelIqLatest = {
   reasoning_effort?: string
   valid_tasks?: number
   cost_usd?: number
+}
+
+export type CodexRadarModelIqComparison = {
+  label?: string
+  model?: string
+  reasoning_effort?: string
+  latest?: CodexRadarModelIqLatest
+  recent_days?: CodexRadarModelIqLatest[]
 }
 
 export type CodexRadarQuotaRadar = {
@@ -129,6 +138,7 @@ export type CodexRadarPublicSummary = {
   model_iq?: {
     latest?: CodexRadarModelIqLatest
     recent_days?: CodexRadarModelIqLatest[]
+    comparisons?: Record<string, CodexRadarModelIqComparison>
     quota_radar?: CodexRadarQuotaRadar
     quota_check?: CodexRadarQuotaCheck
   }

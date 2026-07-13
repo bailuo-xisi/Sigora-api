@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ComponentType, ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -38,7 +38,11 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PublicLayout } from '@/components/layout'
 import { CODEX_RADAR_SUMMARY_URL, getCodexRadarSummary } from './api'
-import type { CodexRadarModelIqLatest, CodexRadarQuotaRadar } from './types'
+import type {
+  CodexRadarModelIqComparison,
+  CodexRadarModelIqLatest,
+  CodexRadarQuotaRadar,
+} from './types'
 
 const ORIGINAL_SITE_URL = 'https://codexradar.com/'
 const FIVE_MINUTES = 5 * 60 * 1000
@@ -106,6 +110,109 @@ function getToneClass(status?: string) {
     return 'border-amber-500/35 bg-amber-500/10 text-amber-600 dark:text-amber-300'
   }
   return 'border-blue-500/35 bg-blue-500/10 text-blue-600 dark:text-blue-300'
+}
+
+function getScoreToneClass(status?: string) {
+  const normalized = (status || '').toLowerCase()
+  if (normalized.includes('green'))
+    return 'text-emerald-600 dark:text-emerald-300'
+  if (normalized.includes('red')) return 'text-destructive'
+  if (
+    normalized.includes('yellow') ||
+    normalized.includes('amber') ||
+    normalized.includes('medium')
+  ) {
+    return 'text-amber-600 dark:text-amber-300'
+  }
+  return 'text-primary'
+}
+
+type ModelIqItem = CodexRadarModelIqComparison & {
+  key: string
+}
+
+function getModelIqComparisons(modelIq?: {
+  latest?: CodexRadarModelIqLatest
+  recent_days?: CodexRadarModelIqLatest[]
+  comparisons?: Record<string, CodexRadarModelIqComparison>
+}) {
+  const primaryLatest =
+    modelIq?.latest && typeof modelIq.latest === 'object' ? modelIq.latest : {}
+  const primaryLabel =
+    [primaryLatest.model, primaryLatest.reasoning_effort]
+      .filter(Boolean)
+      .join(' ') || '--'
+  const items: ModelIqItem[] = [
+    {
+      key: 'primary',
+      label: primaryLabel,
+      model: primaryLatest.model,
+      reasoning_effort: primaryLatest.reasoning_effort,
+      latest: primaryLatest,
+      recent_days: Array.isArray(modelIq?.recent_days)
+        ? modelIq.recent_days
+        : [],
+    },
+  ]
+
+  if (
+    modelIq?.comparisons &&
+    typeof modelIq.comparisons === 'object' &&
+    !Array.isArray(modelIq.comparisons)
+  ) {
+    Object.entries(modelIq.comparisons).forEach(([key, comparison]) => {
+      if (!comparison || typeof comparison !== 'object') return
+
+      const latest =
+        comparison.latest && typeof comparison.latest === 'object'
+          ? comparison.latest
+          : {}
+      items.push({
+        key,
+        label: comparison.label || latest.label || key,
+        model: comparison.model || latest.model,
+        reasoning_effort:
+          comparison.reasoning_effort || latest.reasoning_effort,
+        latest,
+        recent_days: Array.isArray(comparison.recent_days)
+          ? comparison.recent_days
+          : [],
+      })
+    })
+  }
+
+  return items
+}
+
+function titleCase(value?: string) {
+  if (!value) return ''
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function getModelFamilyLabel(model?: string, label?: string) {
+  const source = model || label || ''
+  const known = ['sol', 'terra', 'luna', 'opus', 'sonnet', 'haiku']
+  const parts = source
+    .toLowerCase()
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+  const knownPart = parts.find((part) => known.includes(part))
+  if (knownPart) return titleCase(knownPart)
+
+  const withoutVersion = source
+    .replace(/^gpt[-_ ]?5(?:[._-]?6|[._-]?5)?[-_ ]?/i, '')
+    .trim()
+  if (withoutVersion) return titleCase(withoutVersion.split(/[\s_-]+/)[0])
+  return source || '--'
+}
+
+function getModelIqDisplayLabel(item: ModelIqItem) {
+  const effort = item.reasoning_effort || item.latest?.reasoning_effort
+  const family = getModelFamilyLabel(
+    item.model || item.latest?.model,
+    item.label
+  )
+  return [family, effort].filter(Boolean).join(' ') || item.label || item.key
 }
 
 function MetricCard(props: {
@@ -195,6 +302,63 @@ function RecentIqRow(props: { item: CodexRadarModelIqLatest }) {
   )
 }
 
+function ModelIqChoiceCard(props: {
+  item: ModelIqItem
+  selected: boolean
+  onSelect: () => void
+  passedLabel: string
+}) {
+  const latest = props.item.latest || {}
+  const scoreTone = getScoreToneClass(latest.status)
+  const displayLabel = getModelIqDisplayLabel(props.item)
+
+  return (
+    <button
+      type='button'
+      aria-pressed={props.selected}
+      title={props.item.label || displayLabel}
+      onClick={props.onSelect}
+      className={cn(
+        'bg-background/80 hover:border-primary/40 focus-visible:ring-ring rounded-2xl border p-4 text-left shadow-sm transition focus-visible:ring-2 focus-visible:outline-none',
+        props.selected
+          ? 'border-primary/60 ring-primary/15 shadow-md ring-4'
+          : 'border-border'
+      )}
+    >
+      <div className='flex min-h-12 items-start justify-between gap-3'>
+        <div className='min-w-0'>
+          <div className='text-base leading-5 font-semibold break-words'>
+            {displayLabel}
+          </div>
+          <div className='text-muted-foreground mt-1 text-xs break-all'>
+            {props.item.model || latest.model || '--'}
+          </div>
+        </div>
+        <div className={cn('font-mono text-3xl font-semibold', scoreTone)}>
+          {latest.score ?? '--'}
+        </div>
+      </div>
+
+      <div className='text-muted-foreground mt-4 grid grid-cols-3 gap-2 text-xs'>
+        <div>
+          <div className='font-medium'>
+            {latest.passed ?? '--'}/{latest.tasks ?? '--'}
+          </div>
+          <div>{props.passedLabel}</div>
+        </div>
+        <div>
+          <div className='font-medium'>{formatUsd(latest.cost_usd)}</div>
+          <div>{formatNumber(latest.total_tokens)}</div>
+        </div>
+        <div className='text-right'>
+          <div className='font-medium'>{latest.wall_time_human || '--'}</div>
+          <div>{latest.status || '--'}</div>
+        </div>
+      </div>
+    </button>
+  )
+}
+
 export function CodexRadarPage() {
   const { t, i18n } = useTranslation()
   const query = useQuery({
@@ -209,6 +373,7 @@ export function CodexRadarPage() {
   const data = query.data
   const isZh = i18n.language.toLowerCase().startsWith('zh')
   const latest = data?.model_iq?.latest
+  const [selectedModelKey, setSelectedModelKey] = useState('primary')
   const quotaRadar = data?.model_iq?.quota_radar
   const quotaCheck = data?.model_iq?.quota_check
   const tiboPresence = data?.tibo_presence
@@ -226,12 +391,28 @@ export function CodexRadarPage() {
     t('Data from Codex Radar codexradar.com')
   const statusLabel = data?.window?.open ? t('Window open') : t('Window closed')
   const recommendedAction = data?.recommended_action || data?.window?.action
-  const recentDays = useMemo(
+  const modelIqItems = useMemo(
+    () => getModelIqComparisons(data?.model_iq),
+    [data?.model_iq]
+  )
+  useEffect(() => {
+    if (!modelIqItems.some((item) => item.key === selectedModelKey)) {
+      setSelectedModelKey(modelIqItems[0]?.key || 'primary')
+    }
+  }, [modelIqItems, selectedModelKey])
+  const selectedModel = useMemo(
     () =>
-      Array.isArray(data?.model_iq?.recent_days)
-        ? data.model_iq.recent_days.slice(-6).reverse()
+      modelIqItems.find((item) => item.key === selectedModelKey) ||
+      modelIqItems[0],
+    [modelIqItems, selectedModelKey]
+  )
+  const selectedLatest: CodexRadarModelIqLatest = selectedModel?.latest || {}
+  const selectedRecentDays = useMemo(
+    () =>
+      Array.isArray(selectedModel?.recent_days)
+        ? selectedModel.recent_days.slice(-6).reverse()
         : [],
-    [data?.model_iq?.recent_days]
+    [selectedModel]
   )
 
   if (query.isLoading) return <LoadingView />
@@ -426,19 +607,33 @@ export function CodexRadarPage() {
             icon={Gauge}
             title={t('Model IQ')}
             action={
-              <Badge variant='outline' className={getToneClass(latest?.status)}>
-                {latest?.status || '--'}
+              <Badge
+                variant='outline'
+                className={getToneClass(selectedLatest?.status)}
+              >
+                {selectedLatest?.status || '--'}
               </Badge>
             }
           >
             <div className='space-y-4'>
+              <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-3'>
+                {modelIqItems.map((item) => (
+                  <ModelIqChoiceCard
+                    key={item.key}
+                    item={item}
+                    selected={item.key === selectedModelKey}
+                    onSelect={() => setSelectedModelKey(item.key)}
+                    passedLabel={t('passed')}
+                  />
+                ))}
+              </div>
               <div className='grid gap-3 md:grid-cols-3'>
                 <div className='rounded-xl border p-3'>
                   <div className='text-muted-foreground text-xs'>
                     {t('Model')}
                   </div>
-                  <div className='mt-1 truncate font-semibold'>
-                    {latest?.model || '--'}
+                  <div className='mt-1 font-semibold break-all'>
+                    {selectedLatest?.model || selectedModel?.model || '--'}
                   </div>
                 </div>
                 <div className='rounded-xl border p-3'>
@@ -446,7 +641,7 @@ export function CodexRadarPage() {
                     {t('Tokens')}
                   </div>
                   <div className='mt-1 font-semibold'>
-                    {formatNumber(latest?.total_tokens)}
+                    {formatNumber(selectedLatest?.total_tokens)}
                   </div>
                 </div>
                 <div className='rounded-xl border p-3'>
@@ -454,14 +649,27 @@ export function CodexRadarPage() {
                     {t('Cost')}
                   </div>
                   <div className='mt-1 font-semibold'>
-                    {formatUsd(latest?.cost_usd)}
+                    {formatUsd(selectedLatest?.cost_usd)}
                   </div>
                 </div>
               </div>
+              <div className='rounded-xl border p-3'>
+                <div className='text-muted-foreground text-xs'>
+                  {t('Reasoning Effort')}
+                </div>
+                <div className='mt-1 font-semibold'>
+                  {selectedLatest?.reasoning_effort ||
+                    selectedModel?.reasoning_effort ||
+                    '--'}
+                </div>
+              </div>
               <div className='space-y-2'>
-                {recentDays.length > 0 ? (
-                  recentDays.map((item) => (
-                    <RecentIqRow key={item.date} item={item} />
+                {selectedRecentDays.length > 0 ? (
+                  selectedRecentDays.map((item, index) => (
+                    <RecentIqRow
+                      key={`${selectedModel?.key || 'primary'}-${item.date || 'unknown'}-${index}`}
+                      item={item}
+                    />
                   ))
                 ) : (
                   <p className='text-muted-foreground text-sm'>
