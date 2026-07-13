@@ -6,13 +6,11 @@ on:
       - main
 
 jobs:
-  # 任务一：在 GitHub 云端打包，并推送到 GitHub 镜像仓库
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write  # 允许 GitHub Actions 向你的镜像仓库写入数据
-
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,7 +20,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} # 官方自带密钥，无需手动配置
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -31,12 +29,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true  # 打包完直接推送到云端，不再保存为 tar 压缩包
+          push: true
           tags: ghcr.io/bailuo-xisi/sigora-api:latest
 
-  # 任务二：登录服务器拉取新镜像并重启
   deploy:
-    needs: build-and-push # 必须等上面的打包任务成功后，才执行这步
+    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
       - name: Deploy on server
@@ -47,20 +44,13 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd /opt/Sigora-api
-            
-            # 1. 强制拉取最新的 docker-compose.yml 配置文件
+
             git fetch origin main
             git reset --hard origin/main
-            
-            # 2. 用临时的 GitHub Token 登录服务器端的 Docker，获取拉取权限
+
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # 3. 直接从云端拉取刚才打包好的新镜像 (Docker 会智能只拉取几十M的增量部分)
+
             docker pull ghcr.io/bailuo-xisi/sigora-api:latest
-            
-            # 4. 停止旧容器，用新镜像启动
             docker-compose down
             docker-compose up -d
-            
-            # 5. 清理掉被替换下来的旧镜像，防止时间长了把服务器硬盘撑爆
             docker image prune -f
