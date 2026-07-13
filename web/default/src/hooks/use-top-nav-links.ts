@@ -85,6 +85,7 @@ export function useTopNavLinks(): TopNavLink[] {
   // Docs
   if (modules?.docs !== false) {
     links.push({ title: t('Docs'), href: '/docs' })
+    links.push({ title: t('Codex Radar'), href: '/codex-radar' })
   }
 
   // About
