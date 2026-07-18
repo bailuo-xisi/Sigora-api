@@ -56,7 +56,7 @@ export function CodexQuotaBonusDialog(props: CodexQuotaBonusDialogProps) {
       onOpenChange={props.onOpenChange}
       title={t('Adjust Codex Extra Share')}
       description={t(
-        'Extra share is persistent and counts toward the site-wide 100% allocation.'
+        'Extra share is persistent, and site-wide allocated shares may exceed 100%.'
       )}
       contentHeight='auto'
       bodyClassName='space-y-4'

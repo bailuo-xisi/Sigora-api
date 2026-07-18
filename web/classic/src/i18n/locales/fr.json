@@ -3698,7 +3698,7 @@
     "Codex 额外份额已更新": "Part Codex supplémentaire mise à jour",
     "调整 Codex 额外份额": "Ajuster la part Codex supplémentaire",
     "占全站 Codex 周/月长期额度池的百分比": "Pourcentage du quota Codex hebdomadaire ou mensuel à long terme du site",
-    "额外份额持续有效，并计入全站 100% 分配空间。": "La part supplémentaire est persistante et compte dans l'attribution globale de 100 %.",
+    "额外份额持续有效，全站已分配份额允许超过 100%。": "La part supplémentaire reste active et les parts attribuées à l'échelle du site peuvent dépasser 100 %.",
     "当前额外份额": "Part supplémentaire actuelle",
     "份额百分比": "Pourcentage de part",
     "Codex 用户额度分配": "Attribution du quota Codex par utilisateur",

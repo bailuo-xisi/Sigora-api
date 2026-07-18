@@ -1617,7 +1617,7 @@
     "External Speed Test": "Kiểm tra tốc độ bên ngoài",
     "Extra": "Thêm",
     "Extra Notes (Optional)": "Ghi chú bổ sung (Tùy chọn)",
-    "Extra share is persistent and counts toward the site-wide 100% allocation.": "Tỷ lệ bổ sung được duy trì và được tính vào tổng phân bổ 100% của hệ thống.",
+    "Extra share is persistent, and site-wide allocated shares may exceed 100%.": "Tỷ lệ bổ sung được duy trì và tổng tỷ lệ phân bổ trên toàn hệ thống có thể vượt quá 100%.",
     "extras": "mục bổ sung",
     "Fail Reason": "Lý do thất bại",
     "Fail Reason Details": "Chi tiết lý do thất bại",

@@ -3844,7 +3844,7 @@
     "Codex 额外份额已更新": "Codex extra share updated",
     "调整 Codex 额外份额": "Adjust Codex Extra Share",
     "占全站 Codex 周/月长期额度池的百分比": "Percentage of the site-wide Codex weekly or monthly long-term quota pool",
-    "额外份额持续有效，并计入全站 100% 分配空间。": "Extra share is persistent and counts toward the site-wide 100% allocation.",
+    "额外份额持续有效，全站已分配份额允许超过 100%。": "Extra share is persistent, and site-wide allocated shares may exceed 100%.",
     "当前额外份额": "Current extra share",
     "份额百分比": "Share Percentage",
     "Codex 用户额度分配": "Codex User Quota Allocation",

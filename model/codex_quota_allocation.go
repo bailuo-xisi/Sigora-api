@@ -91,16 +91,6 @@ func UpdateCodexQuotaPolicy(userId int, shareBps int, bonusBps int) error {
 			return errors.New("Codex quota allocation only applies to common users")
 		}
 
-		var allocated int64
-		if err := tx.Model(&User{}).
-			Where("role = ? AND id <> ?", common.RoleCommonUser, userId).
-			Select("COALESCE(SUM(codex_quota_share_bps + codex_quota_bonus_bps), 0)").
-			Scan(&allocated).Error; err != nil {
-			return err
-		}
-		if allocated+int64(shareBps+bonusBps) > CodexQuotaMaxBps {
-			return errors.New("total Codex quota allocation exceeds 100%")
-		}
 		return tx.Model(&User{}).Where("id = ?", userId).Updates(map[string]interface{}{
 			"codex_quota_share_bps": shareBps,
 			"codex_quota_bonus_bps": bonusBps,

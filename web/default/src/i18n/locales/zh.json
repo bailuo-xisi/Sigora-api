@@ -1617,7 +1617,7 @@
     "External Speed Test": "外部速度测试",
     "Extra": "额外",
     "Extra Notes (Optional)": "额外备注（可选）",
-    "Extra share is persistent and counts toward the site-wide 100% allocation.": "额外份额会持续生效，并计入全站 100% 的分配总额。",
+    "Extra share is persistent, and site-wide allocated shares may exceed 100%.": "额外份额会持续生效，全站已分配份额允许超过 100%。",
     "extras": "额外项",
     "Fail Reason": "失败原因",
     "Fail Reason Details": "失败原因详情",

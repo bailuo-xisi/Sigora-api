@@ -1617,7 +1617,7 @@
     "External Speed Test": "Внешний тест скорости",
     "Extra": "Дополнительно",
     "Extra Notes (Optional)": "Дополнительные примечания (необязательно)",
-    "Extra share is persistent and counts toward the site-wide 100% allocation.": "Дополнительная доля действует постоянно и учитывается в общем распределении 100%.",
+    "Extra share is persistent, and site-wide allocated shares may exceed 100%.": "Дополнительная доля действует постоянно, а общая сумма распределённых долей может превышать 100%.",
     "extras": "доп. пункты",
     "Fail Reason": "Причина сбоя",
     "Fail Reason Details": "Детали причины сбоя",

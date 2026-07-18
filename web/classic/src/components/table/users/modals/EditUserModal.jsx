@@ -571,7 +571,7 @@ const EditUserModal = (props) => {
       >
         <div className='space-y-4'>
           <Text type='secondary'>
-            {t('额外份额持续有效，并计入全站 100% 分配空间。')}
+            {t('额外份额持续有效，全站已分配份额允许超过 100%。')}
           </Text>
           <div>
             {t('当前额外份额')}：

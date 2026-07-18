@@ -1617,7 +1617,7 @@
     "External Speed Test": "Test de vitesse externe",
     "Extra": "Supplémentaire",
     "Extra Notes (Optional)": "Notes supplémentaires (facultatif)",
-    "Extra share is persistent and counts toward the site-wide 100% allocation.": "La part supplémentaire est persistante et compte dans l'attribution globale de 100 %.",
+    "Extra share is persistent, and site-wide allocated shares may exceed 100%.": "La part supplémentaire reste active et les parts attribuées à l'échelle du site peuvent dépasser 100 %.",
     "extras": "suppléments",
     "Fail Reason": "Raison de l'échec",
     "Fail Reason Details": "Détails de la raison de l'échec",

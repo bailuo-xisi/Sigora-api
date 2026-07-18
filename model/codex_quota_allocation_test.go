@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUpdateCodexQuotaPolicyEnforcesSiteWideLimit(t *testing.T) {
+func TestUpdateCodexQuotaPolicyAllowsSiteWideOversubscription(t *testing.T) {
 	DB.Exec("DELETE FROM users")
 	DB.Exec("DELETE FROM codex_quota_sync_states")
 	t.Cleanup(func() {
@@ -21,8 +21,13 @@ func TestUpdateCodexQuotaPolicyEnforcesSiteWideLimit(t *testing.T) {
 	require.NoError(t, DB.Create(&second).Error)
 
 	require.NoError(t, UpdateCodexQuotaPolicy(first.Id, 6000, 0))
-	require.Error(t, UpdateCodexQuotaPolicy(second.Id, 4001, 0))
-	require.NoError(t, UpdateCodexQuotaPolicy(second.Id, 3500, 500))
+	require.NoError(t, UpdateCodexQuotaPolicy(second.Id, 4001, 0))
+
+	share, bonus, _, err := GetCodexQuotaPolicy(second.Id)
+	require.NoError(t, err)
+	require.Equal(t, 4001, share)
+	require.Zero(t, bonus)
+	require.Error(t, UpdateCodexQuotaPolicy(second.Id, 10001, 0))
 }
 
 func TestUpdateCodexQuotaPolicyRejectsPrivilegedUsers(t *testing.T) {
