@@ -62,7 +62,13 @@ import {
   sideDrawerFormClassName,
   sideDrawerHeaderClassName,
 } from '@/components/drawer-layout'
-import { createUser, updateUser, getUser, getGroups } from '../api'
+import {
+  createUser,
+  updateUser,
+  getUser,
+  getGroups,
+  updateUserCodexQuotaAllocation,
+} from '../api'
 import { BINDING_FIELDS, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
 import {
   userFormSchema,
@@ -72,6 +78,7 @@ import {
   transformUserToFormDefaults,
 } from '../lib'
 import { type User } from '../types'
+import { CodexQuotaBonusDialog } from './codex-quota-bonus-dialog'
 import { UserQuotaDialog } from './user-quota-dialog'
 import { useUsers } from './users-provider'
 
@@ -91,6 +98,7 @@ export function UsersMutateDrawer({
   const { triggerRefresh } = useUsers()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [quotaDialogOpen, setQuotaDialogOpen] = useState(false)
+  const [codexBonusDialogOpen, setCodexBonusDialogOpen] = useState(false)
 
   // Fetch groups
   const { data: groupsData } = useQuery({
@@ -126,6 +134,7 @@ export function UsersMutateDrawer({
   const tokensOnly = currencyMeta.kind === 'tokens'
 
   const currentQuotaRaw = form.watch('quota_dollars') || 0
+  const currentCodexBonusBps = form.watch('codex_quota_bonus_bps') || 0
 
   const onSubmit = async (data: UserFormValues) => {
     if (!isUpdate) {
@@ -147,6 +156,23 @@ export function UsersMutateDrawer({
         : await createUser(payload)
 
       if (result.success) {
+        if (isUpdate && currentRow?.role === 1) {
+          const allocationResult = await updateUserCodexQuotaAllocation(
+            currentRow.id,
+            {
+              share_bps: Math.round(
+                (data.codex_quota_share_percent || 0) * 100
+              ),
+            }
+          )
+          if (!allocationResult.success) {
+            toast.error(
+              allocationResult.message ||
+                t('Failed to update Codex quota allocation')
+            )
+            return
+          }
+        }
         toast.success(
           isUpdate
             ? t(SUCCESS_MESSAGES.USER_UPDATED)
@@ -414,6 +440,52 @@ export function UsersMutateDrawer({
                       </FormItem>
                     )}
                   />
+
+                  {currentRow?.role === 1 && (
+                    <div className='space-y-4 rounded-md border p-4'>
+                      <FormField
+                        control={form.control}
+                        name='codex_quota_share_percent'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('Codex Base Share')}</FormLabel>
+                            <FormControl>
+                              <Input
+                                type='number'
+                                min={0}
+                                max={100}
+                                step={0.01}
+                                value={field.value ?? 0}
+                                onChange={(event) =>
+                                  field.onChange(Number(event.target.value))
+                                }
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              {t(
+                                'Percentage of the site-wide Codex weekly or monthly quota pool.'
+                              )}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className='flex items-center justify-between text-sm'>
+                        <span>
+                          {t('Codex Extra Share')}:{' '}
+                          {(currentCodexBonusBps / 100).toFixed(2)}%
+                        </span>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          size='sm'
+                          onClick={() => setCodexBonusDialogOpen(true)}
+                        >
+                          {t('Adjust')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </SideDrawerSection>
               )}
 
@@ -467,6 +539,15 @@ export function UsersMutateDrawer({
           onOpenChange={setQuotaDialogOpen}
           userId={currentRow.id}
           currentQuota={parseQuotaFromDollars(currentQuotaRaw || 0)}
+          onSuccess={refreshUserData}
+        />
+      )}
+      {currentRow && (
+        <CodexQuotaBonusDialog
+          open={codexBonusDialogOpen}
+          onOpenChange={setCodexBonusDialogOpen}
+          userId={currentRow.id}
+          currentBonusBps={currentCodexBonusBps}
           onSuccess={refreshUserData}
         />
       )}

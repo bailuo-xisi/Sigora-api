@@ -4224,7 +4224,25 @@
     "Refresh": "Làm mới",
     "Refreshes at {{time}}": "Làm mới lúc {{time}}",
     "Reset time unavailable": "Không rõ thời gian đặt lại",
-    "Weekly quota": "Hạn mức tuần"
+    "Weekly quota": "Hạn mức tuần",
+    "Codex 基础份额": "Tỷ lệ Codex cơ bản",
+    "Codex 基础份额更新失败": "Không thể cập nhật tỷ lệ Codex cơ bản",
+    "Codex 额外份额": "Tỷ lệ Codex bổ sung",
+    "Codex 额外份额调整失败": "Không thể điều chỉnh tỷ lệ Codex bổ sung",
+    "Codex 额外份额已更新": "Đã cập nhật tỷ lệ Codex bổ sung",
+    "调整 Codex 额外份额": "Điều chỉnh tỷ lệ Codex bổ sung",
+    "占全站 Codex 周/月长期额度池的百分比": "Tỷ lệ phần trăm của quỹ hạn mức Codex dài hạn theo tuần hoặc tháng toàn hệ thống",
+    "额外份额持续有效，并计入全站 100% 分配空间。": "Tỷ lệ bổ sung được duy trì và được tính vào tổng phân bổ 100% của hệ thống.",
+    "当前额外份额": "Tỷ lệ bổ sung hiện tại",
+    "份额百分比": "Phần trăm tỷ lệ",
+    "Codex 用户额度分配": "Phân bổ hạn mức Codex theo người dùng",
+    "按分配份额限制普通用户使用全站 Codex 周/月长期额度池": "Giới hạn người dùng thường theo tỷ lệ được phân bổ trong quỹ hạn mức Codex dài hạn theo tuần hoặc tháng của toàn hệ thống",
+    "已分配": "Đã phân bổ",
+    "已使用": "Đã sử dụng",
+    "同步已过期": "Đồng bộ đã cũ",
+    "额度池剩余": "Phần quỹ còn lại",
+    "已分配份额": "Tỷ lệ đã phân bổ",
+    "纳入凭证数": "Thông tin xác thực được tính"
   },
   "????": "????"
 }

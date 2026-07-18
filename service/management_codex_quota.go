@@ -31,8 +31,8 @@ const (
 
 type ManagementCodexQuotas struct {
 	Configured bool                       `json:"configured"`
-	Items     []ManagementCodexQuotaItem `json:"items"`
-	UpdatedAt int64                      `json:"updated_at"`
+	Items      []ManagementCodexQuotaItem `json:"items"`
+	UpdatedAt  int64                      `json:"updated_at"`
 }
 
 type ManagementCodexQuotaItem struct {
@@ -99,18 +99,28 @@ var managementCodexQuotaCache = struct {
 }{}
 
 func GetManagementCodexQuotas(ctx context.Context) (*ManagementCodexQuotas, error) {
+	return getManagementCodexQuotas(ctx, false)
+}
+
+func RefreshManagementCodexQuotas(ctx context.Context) (*ManagementCodexQuotas, error) {
+	return getManagementCodexQuotas(ctx, true)
+}
+
+func getManagementCodexQuotas(ctx context.Context, force bool) (*ManagementCodexQuotas, error) {
 	cfg := getManagementCodexQuotaConfig()
 	if cfg.key == "" {
 		return &ManagementCodexQuotas{
 			Configured: false,
-			Items:     []ManagementCodexQuotaItem{},
-			UpdatedAt: time.Now().Unix(),
+			Items:      []ManagementCodexQuotaItem{},
+			UpdatedAt:  time.Now().Unix(),
 		}, nil
 	}
 
 	cacheKey := cfg.managementURL + "|" + cfg.key
-	if data := getCachedManagementCodexQuotas(cacheKey); data != nil {
-		return data, nil
+	if !force {
+		if data := getCachedManagementCodexQuotas(cacheKey); data != nil {
+			return data, nil
+		}
 	}
 
 	client := getManagementCodexHTTPClient()
@@ -121,8 +131,8 @@ func GetManagementCodexQuotas(ctx context.Context) (*ManagementCodexQuotas, erro
 
 	result := &ManagementCodexQuotas{
 		Configured: true,
-		Items:     fetchManagementCodexQuotaItems(ctx, client, cfg, files),
-		UpdatedAt: time.Now().Unix(),
+		Items:      fetchManagementCodexQuotaItems(ctx, client, cfg, files),
+		UpdatedAt:  time.Now().Unix(),
 	}
 	setCachedManagementCodexQuotas(cacheKey, result)
 	return result, nil

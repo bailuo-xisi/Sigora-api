@@ -69,6 +69,10 @@ const EditUserModal = (props) => {
   const [adjustAmountLocal, setAdjustAmountLocal] = useState('');
   const [adjustMode, setAdjustMode] = useState('add');
   const [adjustLoading, setAdjustLoading] = useState(false);
+  const [codexBonusModalOpen, setCodexBonusModalOpen] = useState(false);
+  const [codexBonusMode, setCodexBonusMode] = useState('add');
+  const [codexBonusPercent, setCodexBonusPercent] = useState('');
+  const [codexBonusLoading, setCodexBonusLoading] = useState(false);
   const isMobile = useIsMobile();
   const [groupOptions, setGroupOptions] = useState([]);
   const [bindingModalVisible, setBindingModalVisible] = useState(false);
@@ -92,6 +96,8 @@ const EditUserModal = (props) => {
     email: '',
     quota: 0,
     quota_amount: 0,
+    codex_quota_share_percent: 0,
+    codex_quota_bonus_bps: 0,
     group: 'default',
     remark: '',
   });
@@ -116,6 +122,9 @@ const EditUserModal = (props) => {
       data.password = '';
       data.quota_amount = Number(
         quotaToDisplayAmount(data.quota || 0).toFixed(6),
+      );
+      data.codex_quota_share_percent = Number(
+        ((data.codex_quota_share_bps || 0) / 100).toFixed(2),
       );
       setInputs({ ...getInitValues(), ...data });
     } else {
@@ -150,6 +159,9 @@ const EditUserModal = (props) => {
     let payload = { ...values };
     delete payload.quota;
     delete payload.quota_amount;
+    delete payload.codex_quota_share_bps;
+    delete payload.codex_quota_bonus_bps;
+    delete payload.codex_quota_share_percent;
     if (userId) {
       payload.id = parseInt(userId);
     }
@@ -157,6 +169,21 @@ const EditUserModal = (props) => {
     const res = await API.put(url, payload);
     const { success, message } = res.data;
     if (success) {
+      if (userId && inputs?.role === 1) {
+        const allocationRes = await API.put(
+          `/api/user/${userId}/codex-quota-allocation`,
+          {
+            share_bps: Math.round(
+              Number(values.codex_quota_share_percent || 0) * 100,
+            ),
+          },
+        );
+        if (!allocationRes.data.success) {
+          showError(allocationRes.data.message || t('Codex 基础份额更新失败'));
+          setLoading(false);
+          return;
+        }
+      }
       showSuccess(t('用户信息更新成功！'));
       props.refresh();
       props.handleClose();
@@ -166,11 +193,41 @@ const EditUserModal = (props) => {
     setLoading(false);
   };
 
+  const adjustCodexBonus = async () => {
+    const percent = Number(codexBonusPercent);
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) return;
+    setCodexBonusLoading(true);
+    try {
+      const res = await API.post(`/api/user/${userId}/codex-quota-bonus`, {
+        mode: codexBonusMode,
+        value_bps: Math.round(percent * 100),
+      });
+      const { success, message } = res.data;
+      if (!success) {
+        showError(message || t('Codex 额外份额调整失败'));
+        return;
+      }
+      showSuccess(t('Codex 额外份额已更新'));
+      setCodexBonusModalOpen(false);
+      setCodexBonusPercent('');
+      await loadUser();
+      props.refresh();
+    } catch (e) {
+      showError(e.message || t('Codex 额外份额调整失败'));
+    } finally {
+      setCodexBonusLoading(false);
+    }
+  };
+
   /* --------------------- atomic quota adjust -------------------- */
   const adjustQuota = async () => {
     const quotaVal = parseInt(adjustQuotaLocal) || 0;
     if (quotaVal <= 0 && adjustMode !== 'override') return;
-    if (adjustMode === 'override' && (adjustQuotaLocal === '' || adjustQuotaLocal == null)) return;
+    if (
+      adjustMode === 'override' &&
+      (adjustQuotaLocal === '' || adjustQuotaLocal == null)
+    )
+      return;
     setAdjustLoading(true);
     try {
       const res = await API.post('/api/user/manage', {
@@ -401,7 +458,10 @@ const EditUserModal = (props) => {
                             ? `▾ ${t('收起原生额度输入')}`
                             : `▸ ${t('使用原生额度输入')}`}
                         </div>
-                        <div style={{ display: showQuotaInput ? 'block' : 'none' }} className='mt-2'>
+                        <div
+                          style={{ display: showQuotaInput ? 'block' : 'none' }}
+                          className='mt-2'
+                        >
                           <Form.InputNumber
                             field='quota'
                             label={t('额度')}
@@ -411,6 +471,43 @@ const EditUserModal = (props) => {
                           />
                         </div>
                       </Col>
+
+                      {inputs?.role === 1 && (
+                        <Col span={24}>
+                          <div className='rounded-xl border border-gray-100 p-3'>
+                            <Form.InputNumber
+                              field='codex_quota_share_percent'
+                              label={t('Codex 基础份额')}
+                              suffix='%'
+                              min={0}
+                              max={100}
+                              precision={2}
+                              step={0.01}
+                              style={{ width: '100%' }}
+                              extraText={t(
+                                '占全站 Codex 周/月长期额度池的百分比',
+                              )}
+                            />
+                            <div className='flex items-center justify-between gap-3'>
+                              <Text type='secondary'>
+                                {t('Codex 额外份额')}：
+                                {(
+                                  Number(values.codex_quota_bonus_bps || 0) /
+                                  100
+                                ).toFixed(2)}
+                                %
+                              </Text>
+                              <Button
+                                type='primary'
+                                theme='outline'
+                                onClick={() => setCodexBonusModalOpen(true)}
+                              >
+                                {t('调整')}
+                              </Button>
+                            </div>
+                          </div>
+                        </Col>
+                      )}
                     </Row>
                   </Card>
                 )}
@@ -459,6 +556,49 @@ const EditUserModal = (props) => {
         isMobile={isMobile}
         formApiRef={formApiRef}
       />
+
+      <Modal
+        centered
+        visible={codexBonusModalOpen}
+        title={t('调整 Codex 额外份额')}
+        onOk={adjustCodexBonus}
+        onCancel={() => {
+          setCodexBonusModalOpen(false);
+          setCodexBonusPercent('');
+          setCodexBonusMode('add');
+        }}
+        confirmLoading={codexBonusLoading}
+      >
+        <div className='space-y-4'>
+          <Text type='secondary'>
+            {t('额外份额持续有效，并计入全站 100% 分配空间。')}
+          </Text>
+          <div>
+            {t('当前额外份额')}：
+            {(Number(inputs?.codex_quota_bonus_bps || 0) / 100).toFixed(2)}%
+          </div>
+          <RadioGroup
+            type='button'
+            value={codexBonusMode}
+            onChange={(event) => setCodexBonusMode(event.target.value)}
+          >
+            <Radio value='add'>{t('增加')}</Radio>
+            <Radio value='subtract'>{t('减少')}</Radio>
+            <Radio value='override'>{t('覆盖')}</Radio>
+          </RadioGroup>
+          <InputNumber
+            value={codexBonusPercent}
+            onChange={setCodexBonusPercent}
+            min={0}
+            max={100}
+            precision={2}
+            step={0.01}
+            suffix='%'
+            placeholder={t('份额百分比')}
+            style={{ width: '100%' }}
+          />
+        </div>
+      </Modal>
 
       {/* 调整额度模态框 */}
       <Modal
@@ -539,7 +679,10 @@ const EditUserModal = (props) => {
             ? `▾ ${t('收起原生额度输入')}`
             : `▸ ${t('使用原生额度输入')}`}
         </div>
-        <div style={{ display: showAdjustQuotaRaw ? 'block' : 'none' }} className='mt-2'>
+        <div
+          style={{ display: showAdjustQuotaRaw ? 'block' : 'none' }}
+          className='mt-2'
+        >
           <div className='mb-1'>
             <Text size='small'>{t('额度')}</Text>
           </div>

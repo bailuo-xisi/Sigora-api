@@ -195,6 +195,12 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			newAPIError = channelErr
 			break
 		}
+		if channel.Type == constant.ChannelTypeCodex {
+			if quotaErr := service.CheckCodexQuotaAccess(relayInfo.UserId); quotaErr != nil {
+				newAPIError = quotaErr
+				break
+			}
+		}
 
 		addUsedChannel(c, channel.Id)
 		bodyStorage, bodyErr := common.GetBodyStorage(c)

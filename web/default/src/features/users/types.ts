@@ -57,6 +57,8 @@ export const userSchema = z.object({
   last_login_at: z.number().optional(),
   DeletedAt: z.any().nullable().optional(),
   remark: z.string().optional(),
+  codex_quota_share_bps: z.number().default(0),
+  codex_quota_bonus_bps: z.number().default(0),
 })
 export type User = z.infer<typeof userSchema>
 
@@ -123,6 +125,15 @@ export interface ManageUserQuotaPayload {
   action: 'add_quota'
   mode: QuotaAdjustMode
   value: number
+}
+
+export interface CodexQuotaPolicyPayload {
+  share_bps: number
+}
+
+export interface CodexQuotaBonusPayload {
+  mode: QuotaAdjustMode
+  value_bps: number
 }
 
 // ============================================================================

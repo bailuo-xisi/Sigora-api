@@ -3690,7 +3690,25 @@
     "Refresh": "Actualiser",
     "Refreshes at {{time}}": "Actualisation à {{time}}",
     "Reset time unavailable": "Heure de réinitialisation indisponible",
-    "Weekly quota": "Quota hebdomadaire"
+    "Weekly quota": "Quota hebdomadaire",
+    "Codex 基础份额": "Part Codex de base",
+    "Codex 基础份额更新失败": "Échec de la mise à jour de la part Codex de base",
+    "Codex 额外份额": "Part Codex supplémentaire",
+    "Codex 额外份额调整失败": "Échec de l'ajustement de la part Codex supplémentaire",
+    "Codex 额外份额已更新": "Part Codex supplémentaire mise à jour",
+    "调整 Codex 额外份额": "Ajuster la part Codex supplémentaire",
+    "占全站 Codex 周/月长期额度池的百分比": "Pourcentage du quota Codex hebdomadaire ou mensuel à long terme du site",
+    "额外份额持续有效，并计入全站 100% 分配空间。": "La part supplémentaire est persistante et compte dans l'attribution globale de 100 %.",
+    "当前额外份额": "Part supplémentaire actuelle",
+    "份额百分比": "Pourcentage de part",
+    "Codex 用户额度分配": "Attribution du quota Codex par utilisateur",
+    "按分配份额限制普通用户使用全站 Codex 周/月长期额度池": "Limiter les utilisateurs ordinaires à leur part attribuée du quota Codex hebdomadaire ou mensuel à long terme du site",
+    "已分配": "Attribué",
+    "已使用": "Utilisé",
+    "同步已过期": "Synchronisation obsolète",
+    "额度池剩余": "Solde du pool",
+    "已分配份额": "Parts attribuées",
+    "纳入凭证数": "Identifiants inclus"
   },
   "????": "????"
 }

@@ -982,6 +982,13 @@ func ManageUser(c *gin.Context) {
 			common.ApiErrorI18n(c, i18n.MsgUserAlreadyAdmin)
 			return
 		}
+		if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Updates(map[string]interface{}{
+			"codex_quota_share_bps": 0,
+			"codex_quota_bonus_bps": 0,
+		}).Error; err != nil {
+			common.ApiError(c, err)
+			return
+		}
 		user.Role = common.RoleAdminUser
 	case "demote":
 		if user.Role == common.RoleRootUser {
@@ -990,6 +997,13 @@ func ManageUser(c *gin.Context) {
 		}
 		if user.Role == common.RoleCommonUser {
 			common.ApiErrorI18n(c, i18n.MsgUserAlreadyCommon)
+			return
+		}
+		if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Updates(map[string]interface{}{
+			"codex_quota_share_bps": 0,
+			"codex_quota_bonus_bps": 0,
+		}).Error; err != nil {
+			common.ApiError(c, err)
 			return
 		}
 		user.Role = common.RoleCommonUser

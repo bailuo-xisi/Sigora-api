@@ -46,6 +46,7 @@ func TestMain(m *testing.M) {
 		&SubscriptionOrder{},
 		&UserSubscription{},
 		&PerfMetric{},
+		&CodexQuotaSyncState{},
 	); err != nil {
 		panic("failed to migrate: " + err.Error())
 	}

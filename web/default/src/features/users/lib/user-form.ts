@@ -33,6 +33,8 @@ export const userFormSchema = z.object({
   quota_dollars: z.number().min(0).optional(),
   group: z.string().optional(),
   remark: z.string().optional(),
+  codex_quota_share_percent: z.number().min(0).max(100).optional(),
+  codex_quota_bonus_bps: z.number().min(0).max(10000).optional(),
 })
 
 export type UserFormValues = z.infer<typeof userFormSchema>
@@ -49,6 +51,8 @@ export const USER_FORM_DEFAULT_VALUES: UserFormValues = {
   quota_dollars: 0,
   group: DEFAULT_GROUP,
   remark: '',
+  codex_quota_share_percent: 0,
+  codex_quota_bonus_bps: 0,
 }
 
 // ============================================================================
@@ -93,5 +97,7 @@ export function transformUserToFormDefaults(user: User): UserFormValues {
     quota_dollars: quotaUnitsToDollars(user.quota),
     group: user.group || DEFAULT_GROUP,
     remark: user.remark || '',
+    codex_quota_share_percent: user.codex_quota_share_bps / 100,
+    codex_quota_bonus_bps: user.codex_quota_bonus_bps,
   }
 }

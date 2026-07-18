@@ -19,6 +19,8 @@ For commercial licensing, please contact support@quantumnous.com
 import { api } from '@/lib/api'
 import type {
   CodexQuotasResult,
+  CodexQuotaAllocationResult,
+  CodexQuotaPoolResult,
   QuotaDataItem,
   UptimeGroupResult,
 } from './types'
@@ -47,6 +49,38 @@ export async function getUserQuotaDates(
     endpoint,
     { params }
   )
+  return res.data
+}
+
+export async function getCodexQuotaAllocation(): Promise<{
+  success: boolean
+  message?: string
+  data?: CodexQuotaAllocationResult
+}> {
+  const res = await api.get<{
+    success: boolean
+    message?: string
+    data?: CodexQuotaAllocationResult
+  }>('/api/external/codex-quota-allocation', {
+    skipBusinessError: true,
+    skipErrorHandler: true,
+  })
+  return res.data
+}
+
+export async function getCodexQuotaPool(): Promise<{
+  success: boolean
+  message?: string
+  data?: CodexQuotaPoolResult
+}> {
+  const res = await api.get<{
+    success: boolean
+    message?: string
+    data?: CodexQuotaPoolResult
+  }>('/api/external/codex-quota-pool', {
+    skipBusinessError: true,
+    skipErrorHandler: true,
+  })
   return res.data
 }
 

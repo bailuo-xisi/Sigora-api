@@ -61,6 +61,35 @@ export interface CodexQuotasResult {
   updated_at: number
 }
 
+export interface CodexQuotaAllocationResult {
+  enabled: boolean
+  share_bps: number
+  bonus_bps: number
+  effective_bps: number
+  pool_capacity_units: number
+  pool_used_units: number
+  pool_remaining_units: number
+  allocated_units: number
+  used_units: number
+  remaining_units: number
+  included_count: number
+  excluded_count: number
+  last_updated_at: number
+  stale: boolean
+}
+
+export interface CodexQuotaPoolResult {
+  enabled: boolean
+  pool_capacity_units: number
+  pool_used_units: number
+  pool_remaining_units: number
+  included_count: number
+  excluded_count: number
+  allocated_bps: number
+  last_updated_at: number
+  stale: boolean
+}
+
 // ============================================================================
 // Uptime Monitoring Types
 // ============================================================================

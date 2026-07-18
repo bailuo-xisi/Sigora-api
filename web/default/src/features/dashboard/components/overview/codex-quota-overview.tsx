@@ -20,10 +20,15 @@ import { useQuery } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { Gauge } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getCodexQuotas } from '@/features/dashboard/api'
+import {
+  getCodexQuotaAllocation,
+  getCodexQuotaPool,
+  getCodexQuotas,
+} from '@/features/dashboard/api'
 import type {
   CodexQuotaItem,
   CodexQuotaWindow,
@@ -160,6 +165,7 @@ function CodexQuotaSkeleton() {
 
 export function CodexQuotaOverview() {
   const { t } = useTranslation()
+  const isAdmin = (useAuthStore((state) => state.auth.user?.role) || 0) >= 10
   const query = useQuery({
     queryKey: ['dashboard', 'overview', 'codex-quotas'],
     queryFn: getCodexQuotas,
@@ -167,6 +173,25 @@ export function CodexQuotaOverview() {
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
   })
+  const allocationQuery = useQuery({
+    queryKey: ['dashboard', 'overview', 'codex-quota-allocation'],
+    queryFn: getCodexQuotaAllocation,
+    retry: false,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
+  const allocation = allocationQuery.data?.success
+    ? allocationQuery.data.data
+    : undefined
+  const poolQuery = useQuery({
+    queryKey: ['dashboard', 'overview', 'codex-quota-pool'],
+    queryFn: getCodexQuotaPool,
+    enabled: isAdmin,
+    retry: false,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
+  const pool = poolQuery.data?.success ? poolQuery.data.data : undefined
 
   const items = query.data?.success ? (query.data.data?.items ?? []) : []
   const message =
@@ -189,6 +214,58 @@ export function CodexQuotaOverview() {
           </Badge>
         ) : null}
       </div>
+
+      {allocation?.enabled ? (
+        <div className='border-border/70 grid grid-cols-3 gap-2 rounded-lg border px-2.5 py-2 text-center text-xs'>
+          <div>
+            <div className='text-muted-foreground'>{t('Assigned')}</div>
+            <div className='font-semibold tabular-nums'>
+              {(allocation.effective_bps / 100).toFixed(2)}%
+            </div>
+          </div>
+          <div>
+            <div className='text-muted-foreground'>{t('Used')}</div>
+            <div className='font-semibold tabular-nums'>
+              {allocation.allocated_units > 0
+                ? `${Math.min(100, (allocation.used_units / allocation.allocated_units) * 100).toFixed(1)}%`
+                : '0%'}
+            </div>
+          </div>
+          <div>
+            <div className='text-muted-foreground'>{t('Status')}</div>
+            <div className='font-semibold'>
+              {allocation.stale ? t('Stale') : t('Active')}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isAdmin && pool ? (
+        <div className='border-border/70 grid grid-cols-3 gap-2 rounded-lg border px-2.5 py-2 text-center text-xs'>
+          <div>
+            <div className='text-muted-foreground'>{t('Pool Remaining')}</div>
+            <div className='font-semibold tabular-nums'>
+              {pool.pool_capacity_units > 0
+                ? `${((pool.pool_remaining_units / pool.pool_capacity_units) * 100).toFixed(1)}%`
+                : '0%'}
+            </div>
+          </div>
+          <div>
+            <div className='text-muted-foreground'>{t('Allocated Shares')}</div>
+            <div className='font-semibold tabular-nums'>
+              {(pool.allocated_bps / 100).toFixed(2)}%
+            </div>
+          </div>
+          <div>
+            <div className='text-muted-foreground'>
+              {t('Included Credentials')}
+            </div>
+            <div className='font-semibold tabular-nums'>
+              {pool.included_count}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {query.isLoading ? (
         <CodexQuotaSkeleton />

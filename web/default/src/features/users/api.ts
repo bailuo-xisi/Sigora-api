@@ -26,6 +26,8 @@ import type {
   ManageUserAction,
   ManageUserQuotaPayload,
   ApiResponse,
+  CodexQuotaPolicyPayload,
+  CodexQuotaBonusPayload,
 } from './types'
 
 // ============================================================================
@@ -122,6 +124,25 @@ export async function adjustUserQuota(
   payload: ManageUserQuotaPayload
 ): Promise<ApiResponse<Partial<User>>> {
   const res = await api.post('/api/user/manage', payload)
+  return res.data
+}
+
+export async function updateUserCodexQuotaAllocation(
+  userId: number,
+  payload: CodexQuotaPolicyPayload
+): Promise<ApiResponse<{ share_bps: number; bonus_bps: number }>> {
+  const res = await api.put(
+    `/api/user/${userId}/codex-quota-allocation`,
+    payload
+  )
+  return res.data
+}
+
+export async function adjustUserCodexQuotaBonus(
+  userId: number,
+  payload: CodexQuotaBonusPayload
+): Promise<ApiResponse<{ share_bps: number; bonus_bps: number }>> {
+  const res = await api.post(`/api/user/${userId}/codex-quota-bonus`, payload)
   return res.data
 }
 

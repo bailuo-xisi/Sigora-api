@@ -138,6 +138,8 @@ func SetApiRouter(router *gin.Engine) {
 				adminRoute.POST("/", controller.CreateUser)
 				adminRoute.POST("/manage", controller.ManageUser)
 				adminRoute.PUT("/", controller.UpdateUser)
+				adminRoute.PUT("/:id/codex-quota-allocation", controller.UpdateUserCodexQuotaAllocation)
+				adminRoute.POST("/:id/codex-quota-bonus", controller.UpdateUserCodexQuotaBonus)
 				adminRoute.DELETE("/:id", controller.DeleteUser)
 				adminRoute.DELETE("/:id/reset_passkey", controller.AdminResetPasskey)
 
@@ -316,6 +318,8 @@ func SetApiRouter(router *gin.Engine) {
 
 		externalRoute := apiRouter.Group("/external")
 		externalRoute.GET("/codex-quotas", middleware.UserAuth(), controller.GetExternalCodexQuotas)
+		externalRoute.GET("/codex-quota-allocation", middleware.UserAuth(), controller.GetSelfCodexQuotaAllocation)
+		externalRoute.GET("/codex-quota-pool", middleware.AdminAuth(), controller.GetCodexQuotaPool)
 
 		logRoute.Use(middleware.CORS(), middleware.CriticalRateLimit())
 		{
