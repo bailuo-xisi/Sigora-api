@@ -46,6 +46,16 @@ function formatQuotaPercent(value?: number | null) {
   return `${Math.round(Math.max(0, Math.min(100, value)))}%`
 }
 
+function formatAllocatedUsagePercent(
+  usedUnits: number,
+  allocatedUnits: number
+) {
+  if (usedUnits <= 0 || allocatedUnits <= 0) return '0%'
+  const percentage = Math.min(100, (usedUnits / allocatedUnits) * 100)
+  if (percentage < 0.1) return '<0.1%'
+  return `${percentage.toFixed(1)}%`
+}
+
 function formatResetTime(value?: number | null) {
   if (!value || value <= 0) return ''
   return new Intl.DateTimeFormat(undefined, {
@@ -226,9 +236,10 @@ export function CodexQuotaOverview() {
           <div>
             <div className='text-muted-foreground'>{t('Used')}</div>
             <div className='font-semibold tabular-nums'>
-              {allocation.allocated_units > 0
-                ? `${Math.min(100, (allocation.used_units / allocation.allocated_units) * 100).toFixed(1)}%`
-                : '0%'}
+              {formatAllocatedUsagePercent(
+                allocation.used_units,
+                allocation.allocated_units
+              )}
             </div>
           </div>
           <div>

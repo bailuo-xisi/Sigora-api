@@ -58,6 +58,11 @@ type codexCycleDelta struct {
 	Delta   int64
 }
 
+type codexCycleObservation struct {
+	CycleId           int64
+	UpstreamUsedUnits int64
+}
+
 type codexWeight struct {
 	UserId int
 	Weight int64
@@ -65,6 +70,7 @@ type codexWeight struct {
 }
 
 var codexQuotaSyncLock sync.Mutex
+var codexQuotaNow = time.Now
 
 func StartCodexQuotaAllocationTask() {
 	go func() {
@@ -91,7 +97,7 @@ func SyncCodexQuotaAllocation(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	now := time.Now().Unix()
+	now := codexQuotaNow().Unix()
 	closedMinute := now/60*60 - 60
 
 	return model.DB.Transaction(func(tx *gorm.DB) error {
@@ -101,6 +107,7 @@ func SyncCodexQuotaAllocation(ctx context.Context) error {
 		}
 
 		cycleDeltas := make([]codexCycleDelta, 0)
+		cycleObservations := make([]codexCycleObservation, 0)
 		included := 0
 		excluded := 0
 		for _, item := range quotaData.Items {
@@ -168,12 +175,9 @@ func SyncCodexQuotaAllocation(ctx context.Context) error {
 				if delta > 0 {
 					cycleDeltas = append(cycleDeltas, codexCycleDelta{CycleId: cycle.Id, Delta: delta})
 				}
-				if err := tx.Model(&model.CodexQuotaCycle{}).Where("id = ?", cycle.Id).Updates(map[string]interface{}{
-					"upstream_used_units": usedUnits,
-					"last_seen_at":        now,
-				}).Error; err != nil {
-					return err
-				}
+				cycleObservations = append(cycleObservations, codexCycleObservation{
+					CycleId: cycle.Id, UpstreamUsedUnits: usedUnits,
+				})
 			}
 			if foundLongWindow {
 				included++
@@ -182,17 +186,41 @@ func SyncCodexQuotaAllocation(ctx context.Context) error {
 			}
 		}
 
+		commitObservedUsage := true
 		if state.LastBucketMinute == 0 {
 			state.LastBucketMinute = closedMinute
-		} else if closedMinute > state.LastBucketMinute && len(cycleDeltas) > 0 {
-			weights, err := loadCodexWeights(tx, state.LastBucketMinute, closedMinute)
-			if err != nil {
+		} else if len(cycleDeltas) > 0 {
+			if closedMinute <= state.LastBucketMinute {
+				commitObservedUsage = false
+			} else {
+				hasOpenWeights, err := hasCodexWeightsAfter(tx, closedMinute)
+				if err != nil {
+					return err
+				}
+				if hasOpenWeights {
+					commitObservedUsage = false
+				} else {
+					weights, err := loadCodexWeights(tx, state.LastBucketMinute, closedMinute)
+					if err != nil {
+						return err
+					}
+					if err := attributeCodexCycleDeltas(tx, cycleDeltas, weights); err != nil {
+						return err
+					}
+					state.LastBucketMinute = closedMinute
+				}
+			}
+		}
+
+		for _, observation := range cycleObservations {
+			updates := map[string]interface{}{"last_seen_at": now}
+			if commitObservedUsage {
+				updates["upstream_used_units"] = observation.UpstreamUsedUnits
+			}
+			if err := tx.Model(&model.CodexQuotaCycle{}).Where("id = ?", observation.CycleId).
+				Updates(updates).Error; err != nil {
 				return err
 			}
-			if err := attributeCodexCycleDeltas(tx, cycleDeltas, weights); err != nil {
-				return err
-			}
-			state.LastBucketMinute = closedMinute
 		}
 
 		state.LastSuccessAt = now
@@ -203,6 +231,14 @@ func SyncCodexQuotaAllocation(ctx context.Context) error {
 		}
 		return tx.Where("bucket_minute < ?", state.LastBucketMinute-86400).Delete(&model.CodexUsageBucket{}).Error
 	})
+}
+
+func hasCodexWeightsAfter(tx *gorm.DB, bucketMinute int64) (bool, error) {
+	var count int64
+	err := tx.Model(&model.CodexUsageBucket{}).
+		Where("bucket_minute > ?", bucketMinute).
+		Count(&count).Error
+	return count > 0, err
 }
 
 func loadCodexWeights(tx *gorm.DB, afterMinute int64, throughMinute int64) ([]codexWeight, error) {

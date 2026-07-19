@@ -36,6 +36,13 @@ const formatPercent = (value) => {
   return `${Math.round(percent)}%`;
 };
 
+const formatAllocatedUsagePercent = (usedUnits, allocatedUnits) => {
+  if (usedUnits <= 0 || allocatedUnits <= 0) return '0%';
+  const percentage = Math.min(100, (usedUnits / allocatedUnits) * 100);
+  if (percentage < 0.1) return '<0.1%';
+  return `${percentage.toFixed(1)}%`;
+};
+
 const formatResetTime = (value) => {
   if (!value || value <= 0) return '';
   return new Intl.DateTimeFormat(undefined, {
@@ -237,14 +244,10 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
             <div>
               <div className='text-gray-500'>{t('已使用')}</div>
               <div className='font-semibold tabular-nums'>
-                {allocationData.allocated_units > 0
-                  ? `${Math.min(
-                      100,
-                      (allocationData.used_units /
-                        allocationData.allocated_units) *
-                        100,
-                    ).toFixed(1)}%`
-                  : '0%'}
+                {formatAllocatedUsagePercent(
+                  allocationData.used_units,
+                  allocationData.allocated_units,
+                )}
               </div>
             </div>
             <div>
