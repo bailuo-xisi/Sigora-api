@@ -284,9 +284,13 @@ func migrateDB() error {
 		&CodexQuotaCycle{},
 		&CodexUserCycleUsage{},
 		&CodexUsageBucket{},
+		&CodexQuotaUnattributedUsage{},
 		&CodexQuotaSyncState{},
 	)
 	if err != nil {
+		return err
+	}
+	if err := MigrateCodexQuotaUsageBucketIndex(); err != nil {
 		return err
 	}
 	if common.UsingSQLite {
@@ -337,6 +341,7 @@ func migrateDBFast() error {
 		{&CodexQuotaCycle{}, "CodexQuotaCycle"},
 		{&CodexUserCycleUsage{}, "CodexUserCycleUsage"},
 		{&CodexUsageBucket{}, "CodexUsageBucket"},
+		{&CodexQuotaUnattributedUsage{}, "CodexQuotaUnattributedUsage"},
 		{&CodexQuotaSyncState{}, "CodexQuotaSyncState"},
 	}
 	// 动态计算migration数量，确保errChan缓冲区足够大
@@ -361,6 +366,9 @@ func migrateDBFast() error {
 		if err != nil {
 			return err
 		}
+	}
+	if err := MigrateCodexQuotaUsageBucketIndex(); err != nil {
+		return err
 	}
 	if common.UsingSQLite {
 		if err := ensureSubscriptionPlanTableSQLite(); err != nil {

@@ -42,9 +42,9 @@ func TestGetManagementCodexQuotasFetchesAllCodexFiles(t *testing.T) {
 						"auth_index": "auth-claude",
 					},
 					map[string]any{
-						"name":       "codex-b.json",
-						"type":       "codex",
-						"authIndex":  "auth-b",
+						"name":      "codex-b.json",
+						"type":      "codex",
+						"authIndex": "auth-b",
 						"metadata": map[string]any{
 							"id_token": map[string]any{
 								"https://api.openai.com/auth": map[string]any{
@@ -129,6 +129,9 @@ func TestGetManagementCodexQuotasFetchesAllCodexFiles(t *testing.T) {
 	if first.Name != "codex-a.json" || first.PlanType != "plus" {
 		t.Fatalf("unexpected first item: %+v", first)
 	}
+	if first.AccountHash != hashCodexAccountID("acct-a") {
+		t.Fatalf("expected first account hash to be retained")
+	}
 	if len(first.Windows) != 2 {
 		t.Fatalf("expected 2 windows, got %+v", first.Windows)
 	}
@@ -138,6 +141,9 @@ func TestGetManagementCodexQuotasFetchesAllCodexFiles(t *testing.T) {
 	second := result.Items[1]
 	if second.Name != "codex-b.json" || second.PlanType != "team" {
 		t.Fatalf("unexpected second item: %+v", second)
+	}
+	if second.AccountHash != hashCodexAccountID("acct-b") {
+		t.Fatalf("expected second account hash to be retained")
 	}
 	if second.RateLimitResetCreditsAvailableCount == nil || *second.RateLimitResetCreditsAvailableCount != 2 {
 		t.Fatalf("expected reset credits, got %+v", second)

@@ -38,6 +38,7 @@ type ManagementCodexQuotas struct {
 type ManagementCodexQuotaItem struct {
 	Name                                string                       `json:"name"`
 	AuthIndex                           string                       `json:"auth_index,omitempty"`
+	AccountHash                         string                       `json:"-"`
 	PlanType                            string                       `json:"plan_type,omitempty"`
 	SubscriptionActiveUntil             string                       `json:"subscription_active_until,omitempty"`
 	RateLimitResetCreditsAvailableCount *float64                     `json:"rate_limit_reset_credits_available_count,omitempty"`
@@ -282,6 +283,7 @@ func fetchManagementCodexQuotaItem(ctx context.Context, client *http.Client, cfg
 	item := ManagementCodexQuotaItem{
 		Name:                    file.Name,
 		AuthIndex:               file.AuthIndex,
+		AccountHash:             hashCodexAccountID(file.AccountID),
 		PlanType:                file.PlanType,
 		SubscriptionActiveUntil: file.SubscriptionActiveUntil,
 		UpdatedAt:               time.Now().Unix(),
@@ -337,6 +339,7 @@ func failedManagementCodexQuotaItem(file managementCodexAuthFile, err error, sta
 	item := ManagementCodexQuotaItem{
 		Name:                    file.Name,
 		AuthIndex:               file.AuthIndex,
+		AccountHash:             hashCodexAccountID(file.AccountID),
 		PlanType:                file.PlanType,
 		SubscriptionActiveUntil: file.SubscriptionActiveUntil,
 		ErrorStatus:             statusCode,

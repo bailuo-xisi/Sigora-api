@@ -18,11 +18,12 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
-import { Gauge } from 'lucide-react'
+import { Gauge, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   getCodexQuotaAllocation,
@@ -33,6 +34,8 @@ import type {
   CodexQuotaItem,
   CodexQuotaWindow,
 } from '@/features/dashboard/types'
+
+const CODEX_PENDING_REFETCH_INTERVAL = 30 * 1000
 
 function getQuotaWindowLabel(t: TFunction, window: CodexQuotaWindow) {
   if (window.id === 'five-hour') return t('5-hour quota')
@@ -176,23 +179,32 @@ function CodexQuotaSkeleton() {
 export function CodexQuotaOverview() {
   const { t } = useTranslation()
   const isAdmin = (useAuthStore((state) => state.auth.user?.role) || 0) >= 10
-  const query = useQuery({
-    queryKey: ['dashboard', 'overview', 'codex-quotas'],
-    queryFn: getCodexQuotas,
-    retry: false,
-    staleTime: 60 * 1000,
-    refetchOnWindowFocus: false,
-  })
   const allocationQuery = useQuery({
     queryKey: ['dashboard', 'overview', 'codex-quota-allocation'],
     queryFn: getCodexQuotaAllocation,
     retry: false,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
+    refetchInterval: (query) =>
+      query.state.data?.success &&
+      (query.state.data.data?.pending_weight ?? 0) > 0
+        ? CODEX_PENDING_REFETCH_INTERVAL
+        : false,
   })
   const allocation = allocationQuery.data?.success
     ? allocationQuery.data.data
     : undefined
+  const hasPendingSettlement = (allocation?.pending_weight ?? 0) > 0
+  const query = useQuery({
+    queryKey: ['dashboard', 'overview', 'codex-quotas'],
+    queryFn: getCodexQuotas,
+    retry: false,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchInterval: hasPendingSettlement
+      ? CODEX_PENDING_REFETCH_INTERVAL
+      : false,
+  })
   const poolQuery = useQuery({
     queryKey: ['dashboard', 'overview', 'codex-quota-pool'],
     queryFn: getCodexQuotaPool,
@@ -200,8 +212,23 @@ export function CodexQuotaOverview() {
     retry: false,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
+    refetchInterval: hasPendingSettlement
+      ? CODEX_PENDING_REFETCH_INTERVAL
+      : false,
   })
   const pool = poolQuery.data?.success ? poolQuery.data.data : undefined
+  const isRefreshing =
+    query.isFetching ||
+    allocationQuery.isFetching ||
+    (isAdmin && poolQuery.isFetching)
+
+  const handleRefresh = () => {
+    void query.refetch()
+    void allocationQuery.refetch()
+    if (isAdmin) {
+      void poolQuery.refetch()
+    }
+  }
 
   const items = query.data?.success ? (query.data.data?.items ?? []) : []
   const message =
@@ -218,11 +245,26 @@ export function CodexQuotaOverview() {
           <Gauge className='size-3 shrink-0' aria-hidden='true' />
           <span className='truncate'>{t('Codex quota')}</span>
         </div>
-        {items.length > 0 ? (
-          <Badge variant='outline' className='shrink-0'>
-            {items.length}
-          </Badge>
-        ) : null}
+        <div className='flex shrink-0 items-center gap-1'>
+          {items.length > 0 ? (
+            <Badge variant='outline'>{items.length}</Badge>
+          ) : null}
+          <Button
+            type='button'
+            variant='ghost'
+            size='sm'
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className='size-7 p-0'
+            aria-label={t('Refresh')}
+            title={t('Refresh')}
+          >
+            <RefreshCw
+              className={cn('size-3.5', isRefreshing && 'animate-spin')}
+              aria-hidden='true'
+            />
+          </Button>
+        </div>
       </div>
 
       {allocation?.enabled ? (
@@ -235,10 +277,10 @@ export function CodexQuotaOverview() {
               </div>
             </div>
             <div>
-              <div className='text-muted-foreground'>{t('Used')}</div>
+              <div className='text-muted-foreground'>{t('Settled usage')}</div>
               <div className='font-semibold tabular-nums'>
                 {formatAllocatedUsagePercent(
-                  allocation.used_units,
+                  allocation.settled_used_units ?? allocation.used_units,
                   allocation.allocated_units
                 )}
               </div>
@@ -246,20 +288,28 @@ export function CodexQuotaOverview() {
             <div>
               <div className='text-muted-foreground'>{t('Status')}</div>
               <div className='font-semibold'>
-                {!allocation.pool_available
-                  ? t('Codex quota unavailable')
-                  : allocation.pending_weight > 0
-                    ? t('Pending')
-                    : allocation.stale
-                      ? t('Stale')
-                      : t('Active')}
+                {allocation.unattributed_weight > 0
+                  ? t('Needs review')
+                  : allocation.stale
+                    ? t('Stale')
+                    : !allocation.pool_available
+                      ? t('Codex quota unavailable')
+                      : allocation.pending_weight > 0
+                        ? t('Pending')
+                        : t('Active')}
               </div>
             </div>
           </div>
+          {allocation.unattributed_weight > 0 ? (
+            <div className='text-muted-foreground text-center text-xs tabular-nums'>
+              {t('Estimated review weight')}:{' '}
+              {allocation.unattributed_weight.toLocaleString()}
+            </div>
+          ) : null}
           {allocation.pending_weight > 0 ? (
             <div className='text-muted-foreground text-center text-xs tabular-nums'>
-              {t('Pending')}: {allocation.pending_weight.toLocaleString()}{' '}
-              {t('Token')}
+              {t('Estimated pending settlement weight')}:{' '}
+              {allocation.pending_weight.toLocaleString()}
             </div>
           ) : null}
         </>

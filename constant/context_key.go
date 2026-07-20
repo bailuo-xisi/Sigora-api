@@ -37,6 +37,9 @@ const (
 	ContextKeyChannelIsMultiKey        ContextKey = "channel_is_multi_key"
 	ContextKeyChannelMultiKeyIndex     ContextKey = "channel_multi_key_index"
 	ContextKeyChannelKey               ContextKey = "channel_key"
+	ContextKeyCodexQuotaAccountHash    ContextKey = "codex_quota_account_hash"
+	ContextKeyCodexQuotaCycleIds       ContextKey = "codex_quota_cycle_ids"
+	ContextKeyCodexQuotaTracking       ContextKey = "codex_quota_tracking"
 
 	ContextKeyAutoGroup           ContextKey = "auto_group"
 	ContextKeyAutoGroupIndex      ContextKey = "auto_group_index"

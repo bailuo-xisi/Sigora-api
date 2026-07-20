@@ -371,11 +371,15 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 	}
 
 	if relayInfo.ChannelType == constant.ChannelTypeCodex && originUsage != nil {
-		if err := model.RecordCodexUsageWeight(
+		if err := FinalizeCodexQuotaUsageTracking(
+			ctx,
 			relayInfo.UserId,
-			codexUsageWeight(summary.TotalTokens, relayInfo.GetEstimatePromptTokens()),
+			relayInfo.ChannelId,
+			relayInfo.ChannelMultiKeyIndex,
+			summary.TotalTokens,
+			relayInfo.GetEstimatePromptTokens(),
 		); err != nil {
-			common.SysLog("failed to record Codex quota usage weight: " + err.Error())
+			common.SysLog("failed to finalize Codex quota usage weight: " + err.Error())
 		}
 	}
 

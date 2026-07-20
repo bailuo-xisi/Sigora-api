@@ -196,7 +196,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			break
 		}
 		if channel.Type == constant.ChannelTypeCodex {
-			if quotaErr := service.CheckCodexQuotaAccess(relayInfo.UserId); quotaErr != nil {
+			if quotaErr := service.CheckCodexQuotaAccess(c, relayInfo.UserId); quotaErr != nil {
 				newAPIError = quotaErr
 				break
 			}
@@ -214,6 +214,24 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			break
 		}
 		c.Request.Body = io.NopCloser(bodyStorage)
+		if channel.Type == constant.ChannelTypeCodex {
+			if trackingErr := service.StartCodexQuotaUsageTracking(
+				c,
+				relayInfo.UserId,
+				channel.Id,
+				common.GetContextKeyInt(c, constant.ContextKeyChannelMultiKeyIndex),
+				relayInfo.GetEstimatePromptTokens(),
+			); trackingErr != nil {
+				newAPIError = types.NewErrorWithStatusCode(
+					trackingErr,
+					types.ErrorCodeCodexQuotaUnavailable,
+					http.StatusServiceUnavailable,
+					types.ErrOptionWithSkipRetry(),
+					types.ErrOptionWithNoRecordErrorLog(),
+				)
+				break
+			}
+		}
 
 		switch relayFormat {
 		case types.RelayFormatOpenAIRealtime:
@@ -229,6 +247,11 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		if newAPIError == nil {
 			relayInfo.LastError = nil
 			return
+		}
+		if channel.Type == constant.ChannelTypeCodex {
+			if err := service.CancelCodexQuotaUsageTracking(c, relayInfo.UserId); err != nil {
+				common.SysLog("failed to cancel Codex quota usage tracking: " + err.Error())
+			}
 		}
 
 		newAPIError = service.NormalizeViolationFeeError(newAPIError)

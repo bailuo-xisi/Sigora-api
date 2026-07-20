@@ -12,6 +12,7 @@ import (
 	"time"
 
 	common2 "github.com/QuantumNous/new-api/common"
+	appconstant "github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/constant"
@@ -327,6 +328,19 @@ func DoApiRequest(a Adaptor, c *gin.Context, info *common.RelayInfo, requestBody
 		return nil, err
 	}
 	applyHeaderOverrideToRequest(req, headerOverride)
+	if info.ChannelType == appconstant.ChannelTypeCodex {
+		expectedAccountHash := common2.GetContextKeyString(c, appconstant.ContextKeyCodexQuotaAccountHash)
+		if expectedAccountHash != "" {
+			accountID := strings.TrimSpace(req.Header.Get("chatgpt-account-id"))
+			actualAccountHash := ""
+			if accountID != "" {
+				actualAccountHash = common2.Sha256([]byte("codex-account:" + accountID))
+			}
+			if actualAccountHash != expectedAccountHash {
+				return nil, errors.New("codex quota account does not match the selected credential")
+			}
+		}
+	}
 	resp, err := doRequest(c, req, info)
 	if err != nil {
 		return nil, fmt.Errorf("do request failed: %w", err)

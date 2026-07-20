@@ -17,11 +17,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Card, Skeleton } from '@douyinfe/semi-ui';
 import { Gauge, RefreshCw } from 'lucide-react';
 import { API, isAdmin } from '../../helpers';
 import ScrollableContainer from '../common/ui/ScrollableContainer';
+
+const CODEX_PENDING_REFRESH_INTERVAL = 30 * 1000;
 
 const clampPercent = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
@@ -152,59 +154,84 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
   const [allocationData, setAllocationData] = useState(null);
   const [poolData, setPoolData] = useState(null);
   const [error, setError] = useState('');
+  const refreshInFlightRef = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadCodexQuotas = useCallback(async () => {
-    setLoading(true);
+    if (refreshInFlightRef.current) {
+      return;
+    }
+    refreshInFlightRef.current = true;
+    setRefreshing(true);
     setError('');
-    const requests = [
-      API.get('/api/external/codex-quotas', {
-        disableDuplicate: true,
-        skipErrorHandler: true,
-      }),
-      API.get('/api/external/codex-quota-allocation', {
-        disableDuplicate: true,
-        skipErrorHandler: true,
-      }),
-    ];
-    if (isAdmin()) {
-      requests.push(
-        API.get('/api/external/codex-quota-pool', {
+    try {
+      const requests = [
+        API.get('/api/external/codex-quotas', {
           disableDuplicate: true,
           skipErrorHandler: true,
         }),
-      );
-    }
-    const [quotaResult, allocationResult, poolResult] =
-      await Promise.allSettled(requests);
+        API.get('/api/external/codex-quota-allocation', {
+          disableDuplicate: true,
+          skipErrorHandler: true,
+        }),
+      ];
+      if (isAdmin()) {
+        requests.push(
+          API.get('/api/external/codex-quota-pool', {
+            disableDuplicate: true,
+            skipErrorHandler: true,
+          }),
+        );
+      }
+      const [quotaResult, allocationResult, poolResult] =
+        await Promise.allSettled(requests);
 
-    if (quotaResult.status === 'fulfilled' && quotaResult.value.data.success) {
-      setQuotaData(quotaResult.value.data.data);
-    } else {
-      const message =
-        quotaResult.status === 'fulfilled'
-          ? quotaResult.value.data.message
-          : quotaResult.reason?.response?.data?.message ||
-            quotaResult.reason?.message;
-      setQuotaData(null);
-      setError(message || t('Codex quota unavailable'));
-    }
-    setAllocationData(
-      allocationResult.status === 'fulfilled' &&
+      if (
+        quotaResult.status === 'fulfilled' &&
+        quotaResult.value.data.success
+      ) {
+        setQuotaData(quotaResult.value.data.data);
+      } else {
+        const message =
+          quotaResult.status === 'fulfilled'
+            ? quotaResult.value.data.message
+            : quotaResult.reason?.response?.data?.message ||
+              quotaResult.reason?.message;
+        setQuotaData(null);
+        setError(message || t('Codex quota unavailable'));
+      }
+      if (
+        allocationResult.status === 'fulfilled' &&
         allocationResult.value.data.success
-        ? allocationResult.value.data.data
-        : null,
-    );
-    setPoolData(
-      poolResult?.status === 'fulfilled' && poolResult.value.data.success
-        ? poolResult.value.data.data
-        : null,
-    );
-    setLoading(false);
+      ) {
+        setAllocationData(allocationResult.value.data.data);
+      }
+      setPoolData(
+        poolResult?.status === 'fulfilled' && poolResult.value.data.success
+          ? poolResult.value.data.data
+          : null,
+      );
+    } finally {
+      refreshInFlightRef.current = false;
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [t]);
 
   useEffect(() => {
     loadCodexQuotas();
   }, [loadCodexQuotas]);
+
+  useEffect(() => {
+    if ((allocationData?.pending_weight ?? 0) <= 0) {
+      return undefined;
+    }
+    const timer = window.setInterval(
+      loadCodexQuotas,
+      CODEX_PENDING_REFRESH_INTERVAL,
+    );
+    return () => window.clearInterval(timer);
+  }, [allocationData?.pending_weight, loadCodexQuotas]);
 
   const items = quotaData?.items || [];
 
@@ -221,7 +248,7 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
           <Button
             icon={<RefreshCw size={14} />}
             onClick={loadCodexQuotas}
-            loading={loading}
+            loading={refreshing}
             size='small'
             theme='borderless'
             type='tertiary'
@@ -242,10 +269,11 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
               </div>
             </div>
             <div>
-              <div className='text-gray-500'>{t('已使用')}</div>
+              <div className='text-gray-500'>{t('已确认使用')}</div>
               <div className='font-semibold tabular-nums'>
                 {formatAllocatedUsagePercent(
-                  allocationData.used_units,
+                  allocationData.settled_used_units ??
+                    allocationData.used_units,
                   allocationData.allocated_units,
                 )}
               </div>
@@ -253,22 +281,31 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
             <div>
               <div className='text-gray-500'>{t('状态')}</div>
               <div className='font-semibold'>
-                {!allocationData.pool_available
-                  ? t('Codex quota unavailable')
-                  : allocationData.pending_weight > 0
-                    ? t('等待中')
-                    : allocationData.stale
-                      ? t('同步已过期')
-                      : t('正常')}
+                {allocationData.unattributed_weight > 0
+                  ? t('需要核查')
+                  : allocationData.stale
+                    ? t('同步已过期')
+                    : !allocationData.pool_available
+                      ? t('Codex quota unavailable')
+                      : allocationData.pending_weight > 0
+                        ? t('等待中')
+                        : t('正常')}
               </div>
             </div>
           </div>
         )}
 
+        {allocationData?.unattributed_weight > 0 && (
+          <div className='mb-3 text-center text-xs tabular-nums text-gray-500'>
+            {t('待核查估算权重')}:{' '}
+            {Number(allocationData.unattributed_weight).toLocaleString()}
+          </div>
+        )}
+
         {allocationData?.pending_weight > 0 && (
           <div className='mb-3 text-center text-xs tabular-nums text-gray-500'>
-            {t('等待中')}:{' '}
-            {Number(allocationData.pending_weight).toLocaleString()} {t('令牌')}
+            {t('待结算估算权重')}:{' '}
+            {Number(allocationData.pending_weight).toLocaleString()}
           </div>
         )}
 
