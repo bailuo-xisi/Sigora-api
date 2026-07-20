@@ -26,6 +26,7 @@ const (
 
 type CodexQuotaAllocationSummary struct {
 	Enabled           bool  `json:"enabled"`
+	PoolAvailable     bool  `json:"pool_available"`
 	ShareBps          int   `json:"share_bps"`
 	BonusBps          int   `json:"bonus_bps"`
 	EffectiveBps      int   `json:"effective_bps"`
@@ -43,6 +44,7 @@ type CodexQuotaAllocationSummary struct {
 
 type CodexQuotaPoolSummary struct {
 	Enabled           bool  `json:"enabled"`
+	PoolAvailable     bool  `json:"pool_available"`
 	PoolCapacityUnits int64 `json:"pool_capacity_units"`
 	PoolUsedUnits     int64 `json:"pool_used_units"`
 	PoolRemainUnits   int64 `json:"pool_remaining_units"`
@@ -127,8 +129,16 @@ func SyncCodexQuotaAllocation(ctx context.Context) error {
 				usedUnits := percentToCodexUnits(*window.UsedPercent)
 				credentialHash := hashCodexCredential(item.AuthIndex)
 				var cycle model.CodexQuotaCycle
-				err := tx.Where("credential_hash = ? AND window_type = ? AND reset_at = ?", credentialHash, window.ID, *window.ResetAt).
-					Order("generation DESC").First(&cycle).Error
+				cycleQuery := tx.Where("credential_hash = ? AND window_type = ?", credentialHash, window.ID)
+				if window.ResetAtDerived {
+					// reset_after_seconds is recomputed for every poll and is not a
+					// stable cycle identity. Keep using the live credential/window
+					// cycle until it expires or upstream usage resets.
+					cycleQuery = cycleQuery.Where("reset_at > ?", now).Order("last_seen_at DESC, id DESC")
+				} else {
+					cycleQuery = cycleQuery.Where("reset_at = ?", *window.ResetAt).Order("generation DESC")
+				}
+				err := cycleQuery.First(&cycle).Error
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					if err := tx.Model(&model.CodexQuotaCycle{}).
 						Where("credential_hash = ? AND window_type = ?", credentialHash, window.ID).
@@ -361,13 +371,25 @@ func GetCodexQuotaAllocationSummary(userId int) (*CodexQuotaAllocationSummary, e
 	if remaining < 0 {
 		remaining = 0
 	}
+	now := time.Now().Unix()
+	stale := isCodexQuotaSyncStale(state.LastSuccessAt, now)
+	poolAvailable := isCodexQuotaPoolAvailable(pool, cycles, state, now)
 	return &CodexQuotaAllocationSummary{
-		Enabled:  operation_setting.CodexQuotaAllocationEnabled,
-		ShareBps: share, BonusBps: bonus, EffectiveBps: effective,
-		PoolCapacityUnits: pool.PoolCapacityUnits, PoolUsedUnits: pool.PoolUsedUnits, PoolRemainUnits: pool.PoolRemainUnits,
-		AllocatedUnits: allocated, UsedUnits: used, RemainingUnits: remaining,
-		IncludedCount: len(cycles), ExcludedCount: state.ExcludedCount,
-		LastUpdatedAt: state.LastSuccessAt, Stale: time.Now().Unix()-state.LastSuccessAt > int64(codexQuotaStaleAfter.Seconds()),
+		Enabled:           operation_setting.CodexQuotaAllocationEnabled,
+		PoolAvailable:     poolAvailable,
+		ShareBps:          share,
+		BonusBps:          bonus,
+		EffectiveBps:      effective,
+		PoolCapacityUnits: pool.PoolCapacityUnits,
+		PoolUsedUnits:     pool.PoolUsedUnits,
+		PoolRemainUnits:   pool.PoolRemainUnits,
+		AllocatedUnits:    allocated,
+		UsedUnits:         used,
+		RemainingUnits:    remaining,
+		IncludedCount:     len(cycles),
+		ExcludedCount:     state.ExcludedCount,
+		LastUpdatedAt:     state.LastSuccessAt,
+		Stale:             stale,
 	}, nil
 }
 
@@ -381,13 +403,26 @@ func GetCodexQuotaPoolSummary() (*CodexQuotaPoolSummary, error) {
 		Select("COALESCE(SUM(codex_quota_share_bps + codex_quota_bonus_bps), 0)").Scan(&allocated).Error; err != nil {
 		return nil, err
 	}
+	now := time.Now().Unix()
 	pool.Enabled = operation_setting.CodexQuotaAllocationEnabled
+	pool.PoolAvailable = isCodexQuotaPoolAvailable(pool, cycles, state, now)
 	pool.AllocatedBps = allocated
 	pool.IncludedCount = len(cycles)
 	pool.ExcludedCount = state.ExcludedCount
 	pool.LastUpdatedAt = state.LastSuccessAt
-	pool.Stale = time.Now().Unix()-state.LastSuccessAt > int64(codexQuotaStaleAfter.Seconds())
+	pool.Stale = isCodexQuotaSyncStale(state.LastSuccessAt, now)
 	return &pool, nil
+}
+
+func isCodexQuotaSyncStale(lastSuccessAt int64, now int64) bool {
+	return lastSuccessAt <= 0 || now-lastSuccessAt > int64(codexQuotaStaleAfter.Seconds())
+}
+
+func isCodexQuotaPoolAvailable(pool CodexQuotaPoolSummary, cycles []model.CodexQuotaCycle, state model.CodexQuotaSyncState, now int64) bool {
+	return !isCodexQuotaSyncStale(state.LastSuccessAt, now) &&
+		state.IncludedCount > 0 &&
+		len(cycles) > 0 &&
+		pool.PoolCapacityUnits > 0
 }
 
 func loadCodexPoolState() (CodexQuotaPoolSummary, []model.CodexQuotaCycle, model.CodexQuotaSyncState, error) {
@@ -428,7 +463,7 @@ func CheckCodexQuotaAccess(userId int) *types.NewAPIError {
 	if err != nil {
 		return types.NewErrorWithStatusCode(err, types.ErrorCodeCodexQuotaUnavailable, http.StatusForbidden, types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
 	}
-	if summary.Stale || summary.PoolCapacityUnits == 0 {
+	if !summary.PoolAvailable {
 		return types.NewErrorWithStatusCode(errors.New("Codex quota pool is unavailable"), types.ErrorCodeCodexQuotaUnavailable, http.StatusForbidden, types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
 	}
 	if summary.EffectiveBps <= 0 || summary.RemainingUnits <= 0 || summary.PoolRemainUnits <= 0 {

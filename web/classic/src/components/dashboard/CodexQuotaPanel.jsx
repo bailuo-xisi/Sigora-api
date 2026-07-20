@@ -253,7 +253,11 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
             <div>
               <div className='text-gray-500'>{t('状态')}</div>
               <div className='font-semibold'>
-                {allocationData.stale ? t('同步已过期') : t('正常')}
+                {!allocationData.pool_available
+                  ? t('Codex quota unavailable')
+                  : allocationData.stale
+                    ? t('同步已过期')
+                    : t('正常')}
               </div>
             </div>
           </div>

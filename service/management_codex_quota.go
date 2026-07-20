@@ -53,6 +53,7 @@ type ManagementCodexQuotaWindow struct {
 	UsedPercent      *float64 `json:"used_percent,omitempty"`
 	RemainingPercent *float64 `json:"remaining_percent,omitempty"`
 	ResetAt          *int64   `json:"reset_at,omitempty"`
+	ResetAtDerived   bool     `json:"-"`
 }
 
 type managementCodexQuotaConfig struct {
@@ -520,8 +521,9 @@ func buildManagementCodexQuotaWindow(id string, window map[string]any, rateLimit
 		result.RemainingPercent = common.GetPointer(clampPercent(remaining))
 	}
 
-	if resetAt, ok := resetAtField(window, now); ok {
+	if resetAt, resetAtDerived, ok := resetAtField(window, now); ok {
 		result.ResetAt = &resetAt
+		result.ResetAtDerived = resetAtDerived
 	}
 
 	if result.UsedPercent == nil && result.ResetAt != nil {
@@ -540,14 +542,14 @@ func buildManagementCodexQuotaWindow(id string, window map[string]any, rateLimit
 	return result
 }
 
-func resetAtField(window map[string]any, now time.Time) (int64, bool) {
+func resetAtField(window map[string]any, now time.Time) (int64, bool, bool) {
 	if value, ok := numberField(window, "reset_at", "resetAt"); ok && value > 0 {
-		return int64(math.Round(value)), true
+		return int64(math.Round(value)), false, true
 	}
 	if value, ok := numberField(window, "reset_after_seconds", "resetAfterSeconds"); ok && value > 0 {
-		return now.Unix() + int64(math.Round(value)), true
+		return now.Unix() + int64(math.Round(value)), true, true
 	}
-	return 0, false
+	return 0, false, false
 }
 
 func isMonthlyWindow(seconds float64) bool {

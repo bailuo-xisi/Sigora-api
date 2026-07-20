@@ -245,7 +245,11 @@ export function CodexQuotaOverview() {
           <div>
             <div className='text-muted-foreground'>{t('Status')}</div>
             <div className='font-semibold'>
-              {allocation.stale ? t('Stale') : t('Active')}
+              {!allocation.pool_available
+                ? t('Codex quota unavailable')
+                : allocation.stale
+                  ? t('Stale')
+                  : t('Active')}
             </div>
           </div>
         </div>

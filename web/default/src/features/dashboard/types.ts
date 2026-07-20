@@ -63,6 +63,7 @@ export interface CodexQuotasResult {
 
 export interface CodexQuotaAllocationResult {
   enabled: boolean
+  pool_available: boolean
   share_bps: number
   bonus_bps: number
   effective_bps: number
@@ -80,6 +81,7 @@ export interface CodexQuotaAllocationResult {
 
 export interface CodexQuotaPoolResult {
   enabled: boolean
+  pool_available: boolean
   pool_capacity_units: number
   pool_used_units: number
   pool_remaining_units: number
