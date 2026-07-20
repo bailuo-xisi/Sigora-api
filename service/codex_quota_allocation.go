@@ -35,7 +35,10 @@ type CodexQuotaAllocationSummary struct {
 	PoolRemainUnits   int64 `json:"pool_remaining_units"`
 	AllocatedUnits    int64 `json:"allocated_units"`
 	UsedUnits         int64 `json:"used_units"`
+	SettledUsedUnits  int64 `json:"settled_used_units"`
 	RemainingUnits    int64 `json:"remaining_units"`
+	PendingWeight     int64 `json:"pending_weight"`
+	PendingSince      int64 `json:"pending_since"`
 	IncludedCount     int   `json:"included_count"`
 	ExcludedCount     int   `json:"excluded_count"`
 	LastUpdatedAt     int64 `json:"last_updated_at"`
@@ -366,6 +369,10 @@ func GetCodexQuotaAllocationSummary(userId int) (*CodexQuotaAllocationSummary, e
 			return nil, err
 		}
 	}
+	pendingWeight, pendingSince, err := getCodexPendingUsage(userId, state.LastBucketMinute)
+	if err != nil {
+		return nil, err
+	}
 	allocated := pool.PoolCapacityUnits * int64(effective) / model.CodexQuotaMaxBps
 	remaining := allocated - used
 	if remaining < 0 {
@@ -385,12 +392,29 @@ func GetCodexQuotaAllocationSummary(userId int) (*CodexQuotaAllocationSummary, e
 		PoolRemainUnits:   pool.PoolRemainUnits,
 		AllocatedUnits:    allocated,
 		UsedUnits:         used,
+		SettledUsedUnits:  used,
 		RemainingUnits:    remaining,
+		PendingWeight:     pendingWeight,
+		PendingSince:      pendingSince,
 		IncludedCount:     len(cycles),
 		ExcludedCount:     state.ExcludedCount,
 		LastUpdatedAt:     state.LastSuccessAt,
 		Stale:             stale,
 	}, nil
+}
+
+type codexPendingUsage struct {
+	PendingWeight int64 `gorm:"column:pending_weight"`
+	PendingSince  int64 `gorm:"column:pending_since"`
+}
+
+func getCodexPendingUsage(userId int, afterMinute int64) (int64, int64, error) {
+	var pending codexPendingUsage
+	err := model.DB.Model(&model.CodexUsageBucket{}).
+		Select("COALESCE(SUM(weight), 0) AS pending_weight, COALESCE(MIN(bucket_minute), 0) AS pending_since").
+		Where("user_id = ? AND bucket_minute > ?", userId, afterMinute).
+		Scan(&pending).Error
+	return pending.PendingWeight, pending.PendingSince, err
 }
 
 func GetCodexQuotaPoolSummary() (*CodexQuotaPoolSummary, error) {

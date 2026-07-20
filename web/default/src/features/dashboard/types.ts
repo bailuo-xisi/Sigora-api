@@ -72,7 +72,10 @@ export interface CodexQuotaAllocationResult {
   pool_remaining_units: number
   allocated_units: number
   used_units: number
+  settled_used_units: number
   remaining_units: number
+  pending_weight: number
+  pending_since: number
   included_count: number
   excluded_count: number
   last_updated_at: number

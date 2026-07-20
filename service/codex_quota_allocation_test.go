@@ -151,6 +151,10 @@ func TestSyncCodexQuotaAllocationDefersDeltaUntilCurrentMinuteWeightCloses(t *te
 	closedMinute := currentMinute - 60
 	require.NoError(t, db.Model(&model.CodexQuotaSyncState{}).Where("id = ?", 1).
 		Update("last_bucket_minute", closedMinute-60).Error)
+	pendingWeight, pendingSince, err := getCodexPendingUsage(user.Id, closedMinute-60)
+	require.NoError(t, err)
+	assert.Equal(t, int64(100), pendingWeight)
+	assert.Equal(t, currentMinute, pendingSince)
 	usedPercent.Store(11)
 
 	require.NoError(t, SyncCodexQuotaAllocation(context.Background()))

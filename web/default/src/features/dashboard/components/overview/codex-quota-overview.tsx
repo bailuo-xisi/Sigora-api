@@ -226,33 +226,43 @@ export function CodexQuotaOverview() {
       </div>
 
       {allocation?.enabled ? (
-        <div className='border-border/70 grid grid-cols-3 gap-2 rounded-lg border px-2.5 py-2 text-center text-xs'>
-          <div>
-            <div className='text-muted-foreground'>{t('Assigned')}</div>
-            <div className='font-semibold tabular-nums'>
-              {(allocation.effective_bps / 100).toFixed(2)}%
+        <>
+          <div className='border-border/70 grid grid-cols-3 gap-2 rounded-lg border px-2.5 py-2 text-center text-xs'>
+            <div>
+              <div className='text-muted-foreground'>{t('Assigned')}</div>
+              <div className='font-semibold tabular-nums'>
+                {(allocation.effective_bps / 100).toFixed(2)}%
+              </div>
+            </div>
+            <div>
+              <div className='text-muted-foreground'>{t('Used')}</div>
+              <div className='font-semibold tabular-nums'>
+                {formatAllocatedUsagePercent(
+                  allocation.used_units,
+                  allocation.allocated_units
+                )}
+              </div>
+            </div>
+            <div>
+              <div className='text-muted-foreground'>{t('Status')}</div>
+              <div className='font-semibold'>
+                {!allocation.pool_available
+                  ? t('Codex quota unavailable')
+                  : allocation.pending_weight > 0
+                    ? t('Pending')
+                    : allocation.stale
+                      ? t('Stale')
+                      : t('Active')}
+              </div>
             </div>
           </div>
-          <div>
-            <div className='text-muted-foreground'>{t('Used')}</div>
-            <div className='font-semibold tabular-nums'>
-              {formatAllocatedUsagePercent(
-                allocation.used_units,
-                allocation.allocated_units
-              )}
+          {allocation.pending_weight > 0 ? (
+            <div className='text-muted-foreground text-center text-xs tabular-nums'>
+              {t('Pending')}: {allocation.pending_weight.toLocaleString()}{' '}
+              {t('Token')}
             </div>
-          </div>
-          <div>
-            <div className='text-muted-foreground'>{t('Status')}</div>
-            <div className='font-semibold'>
-              {!allocation.pool_available
-                ? t('Codex quota unavailable')
-                : allocation.stale
-                  ? t('Stale')
-                  : t('Active')}
-            </div>
-          </div>
-        </div>
+          ) : null}
+        </>
       ) : null}
 
       {isAdmin && pool ? (

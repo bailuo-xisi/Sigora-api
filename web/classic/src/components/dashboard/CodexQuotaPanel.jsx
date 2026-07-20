@@ -255,11 +255,20 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
               <div className='font-semibold'>
                 {!allocationData.pool_available
                   ? t('Codex quota unavailable')
-                  : allocationData.stale
-                    ? t('同步已过期')
-                    : t('正常')}
+                  : allocationData.pending_weight > 0
+                    ? t('等待中')
+                    : allocationData.stale
+                      ? t('同步已过期')
+                      : t('正常')}
               </div>
             </div>
+          </div>
+        )}
+
+        {allocationData?.pending_weight > 0 && (
+          <div className='mb-3 text-center text-xs tabular-nums text-gray-500'>
+            {t('等待中')}:{' '}
+            {Number(allocationData.pending_weight).toLocaleString()} {t('令牌')}
           </div>
         )}
 
