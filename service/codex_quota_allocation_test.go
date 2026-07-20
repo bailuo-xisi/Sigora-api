@@ -156,4 +156,19 @@ func TestSyncCodexQuotaAllocationDefersDeltaUntilCurrentMinuteWeightCloses(t *te
 	var usage model.CodexUserCycleUsage
 	require.NoError(t, db.Where("user_id = ?", user.Id).First(&usage).Error)
 	assert.Equal(t, int64(10_000), usage.UsedUnits)
+
+	require.NoError(t, db.Create(&model.CodexUsageBucket{
+		UserId:       user.Id,
+		BucketMinute: currentMinute,
+		Weight:       100,
+	}).Error)
+	require.NoError(t, db.Model(&model.CodexQuotaSyncState{}).Where("id = ?", 1).
+		Update("last_bucket_minute", closedMinute-60).Error)
+	usedPercent.Store(12)
+
+	require.NoError(t, SyncCodexQuotaAllocation(context.Background()))
+	require.NoError(t, db.First(&cycle).Error)
+	assert.Equal(t, int64(120_000), cycle.UpstreamUsedUnits, "open-minute traffic must not block attribution for closed weights")
+	require.NoError(t, db.Where("user_id = ?", user.Id).First(&usage).Error)
+	assert.Equal(t, int64(20_000), usage.UsedUnits)
 }

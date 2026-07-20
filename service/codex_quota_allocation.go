@@ -193,17 +193,21 @@ func SyncCodexQuotaAllocation(ctx context.Context) error {
 			if closedMinute <= state.LastBucketMinute {
 				commitObservedUsage = false
 			} else {
-				hasOpenWeights, err := hasCodexWeightsAfter(tx, closedMinute)
+				weights, err := loadCodexWeights(tx, state.LastBucketMinute, closedMinute)
 				if err != nil {
 					return err
 				}
-				if hasOpenWeights {
-					commitObservedUsage = false
-				} else {
-					weights, err := loadCodexWeights(tx, state.LastBucketMinute, closedMinute)
+				if len(weights) == 0 {
+					hasOpenWeights, err := hasCodexWeightsAfter(tx, closedMinute)
 					if err != nil {
 						return err
 					}
+					if hasOpenWeights {
+						commitObservedUsage = false
+					} else {
+						state.LastBucketMinute = closedMinute
+					}
+				} else {
 					if err := attributeCodexCycleDeltas(tx, cycleDeltas, weights); err != nil {
 						return err
 					}

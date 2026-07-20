@@ -368,17 +368,14 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 	} else {
 		model.UpdateUserUsedQuotaAndRequestCount(relayInfo.UserId, summary.Quota)
 		model.UpdateChannelUsedQuota(relayInfo.ChannelId, summary.Quota)
-		if relayInfo.ChannelType == constant.ChannelTypeCodex {
-			weight := int64(summary.TotalTokens)
-			if weight <= 0 {
-				weight = int64(summary.Quota)
-			}
-			if weight <= 0 {
-				weight = 1
-			}
-			if err := model.RecordCodexUsageWeight(relayInfo.UserId, weight); err != nil {
-				common.SysLog("failed to record Codex quota usage weight: " + err.Error())
-			}
+	}
+
+	if relayInfo.ChannelType == constant.ChannelTypeCodex && originUsage != nil {
+		if err := model.RecordCodexUsageWeight(
+			relayInfo.UserId,
+			codexUsageWeight(summary.TotalTokens, relayInfo.GetEstimatePromptTokens()),
+		); err != nil {
+			common.SysLog("failed to record Codex quota usage weight: " + err.Error())
 		}
 	}
 
@@ -488,4 +485,14 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 	gopool.Go(func() {
 		perfmetrics.RecordRelaySample(relayInfo, true, int64(summary.CompletionTokens))
 	})
+}
+
+func codexUsageWeight(totalTokens int, estimatedPromptTokens int) int64 {
+	if totalTokens > 0 {
+		return int64(totalTokens)
+	}
+	if estimatedPromptTokens > 0 {
+		return int64(estimatedPromptTokens)
+	}
+	return 1
 }

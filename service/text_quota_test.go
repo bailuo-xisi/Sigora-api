@@ -439,3 +439,22 @@ func TestComposeTieredTextQuotaErrorFallbackUsesPreConsumedQuota(t *testing.T) {
 	require.Equal(t, int64(12500), summary.ToolCallSurchargeQuota.Round(0).IntPart())
 	require.Equal(t, 14500, quota)
 }
+
+func TestCodexUsageWeightFallsBackWhenUpstreamOmitsUsage(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		totalTokens           int
+		estimatedPromptTokens int
+		expected              int64
+	}{
+		{name: "upstream usage", totalTokens: 120, estimatedPromptTokens: 20, expected: 120},
+		{name: "estimated prompt", estimatedPromptTokens: 20, expected: 20},
+		{name: "minimum successful request", expected: 1},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expected, codexUsageWeight(testCase.totalTokens, testCase.estimatedPromptTokens))
+		})
+	}
+}
