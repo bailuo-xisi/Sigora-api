@@ -157,7 +157,7 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
   const refreshInFlightRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadCodexQuotas = useCallback(async () => {
+  const loadCodexQuotas = useCallback(async (forceRefresh = false) => {
     if (refreshInFlightRef.current) {
       return;
     }
@@ -167,6 +167,7 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
     try {
       const requests = [
         API.get('/api/external/codex-quotas', {
+          params: forceRefresh ? { refresh: 1 } : undefined,
           disableDuplicate: true,
           skipErrorHandler: true,
         }),
@@ -247,7 +248,7 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
           </div>
           <Button
             icon={<RefreshCw size={14} />}
-            onClick={loadCodexQuotas}
+            onClick={() => loadCodexQuotas(true)}
             loading={refreshing}
             size='small'
             theme='borderless'

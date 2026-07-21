@@ -84,7 +84,7 @@ export async function getCodexQuotaPool(): Promise<{
   return res.data
 }
 
-export async function getCodexQuotas(): Promise<{
+export async function getCodexQuotas(forceRefresh = false): Promise<{
   success: boolean
   message?: string
   data?: CodexQuotasResult
@@ -94,6 +94,7 @@ export async function getCodexQuotas(): Promise<{
     message?: string
     data?: CodexQuotasResult
   }>('/api/external/codex-quotas', {
+    params: forceRefresh ? { refresh: 1 } : undefined,
     skipBusinessError: true,
     skipErrorHandler: true,
   })

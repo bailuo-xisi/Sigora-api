@@ -16,7 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { Gauge, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -36,6 +37,7 @@ import type {
 } from '@/features/dashboard/types'
 
 const CODEX_PENDING_REFETCH_INTERVAL = 30 * 1000
+const CODEX_QUOTAS_QUERY_KEY = ['dashboard', 'overview', 'codex-quotas']
 
 function getQuotaWindowLabel(t: TFunction, window: CodexQuotaWindow) {
   if (window.id === 'five-hour') return t('5-hour quota')
@@ -178,7 +180,9 @@ function CodexQuotaSkeleton() {
 
 export function CodexQuotaOverview() {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const isAdmin = (useAuthStore((state) => state.auth.user?.role) || 0) >= 10
+  const [isManualRefreshInFlight, setIsManualRefreshInFlight] = useState(false)
   const allocationQuery = useQuery({
     queryKey: ['dashboard', 'overview', 'codex-quota-allocation'],
     queryFn: getCodexQuotaAllocation,
@@ -196,8 +200,8 @@ export function CodexQuotaOverview() {
     : undefined
   const hasPendingSettlement = (allocation?.pending_weight ?? 0) > 0
   const query = useQuery({
-    queryKey: ['dashboard', 'overview', 'codex-quotas'],
-    queryFn: getCodexQuotas,
+    queryKey: CODEX_QUOTAS_QUERY_KEY,
+    queryFn: () => getCodexQuotas(),
     retry: false,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
@@ -218,15 +222,25 @@ export function CodexQuotaOverview() {
   })
   const pool = poolQuery.data?.success ? poolQuery.data.data : undefined
   const isRefreshing =
+    isManualRefreshInFlight ||
     query.isFetching ||
     allocationQuery.isFetching ||
     (isAdmin && poolQuery.isFetching)
 
-  const handleRefresh = () => {
-    void query.refetch()
-    void allocationQuery.refetch()
-    if (isAdmin) {
-      void poolQuery.refetch()
+  const handleRefresh = async () => {
+    if (isRefreshing) return
+
+    setIsManualRefreshInFlight(true)
+    try {
+      const quotaResult = await getCodexQuotas(true)
+      queryClient.setQueryData(CODEX_QUOTAS_QUERY_KEY, quotaResult)
+
+      await allocationQuery.refetch()
+      if (isAdmin) {
+        await poolQuery.refetch()
+      }
+    } finally {
+      setIsManualRefreshInFlight(false)
     }
   }
 
