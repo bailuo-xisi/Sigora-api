@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
+import type { TFunction } from 'i18next'
 import { Pencil } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -37,6 +38,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
 import {
   Select,
   SelectContent,
@@ -62,11 +64,13 @@ import {
   sideDrawerFormClassName,
   sideDrawerHeaderClassName,
 } from '@/components/drawer-layout'
+import type { CodexQuotaAllocationResult } from '@/features/dashboard/types'
 import {
   createUser,
   updateUser,
   getUser,
   getGroups,
+  getUserCodexQuotaAllocation,
   updateUserCodexQuotaAllocation,
 } from '../api'
 import { BINDING_FIELDS, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
@@ -86,6 +90,19 @@ type UsersMutateDrawerProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   currentRow?: User
+}
+
+function formatCodexQuotaUnits(value: number) {
+  return Math.max(0, Math.round(value)).toLocaleString()
+}
+
+function getEstimatedPoolLabel(
+  t: TFunction,
+  windowType: CodexQuotaAllocationResult['window_type']
+) {
+  if (windowType === 'weekly') return t('Estimated weekly quota pool')
+  if (windowType === 'monthly') return t('Estimated monthly quota pool')
+  return t('Estimated long-term quota pool')
 }
 
 export function UsersMutateDrawer({
@@ -108,6 +125,16 @@ export function UsersMutateDrawer({
   })
 
   const groups = groupsData?.data || []
+
+  const codexAllocationQuery = useQuery({
+    queryKey: ['users', currentRow?.id, 'codex-quota-allocation'],
+    queryFn: () => getUserCodexQuotaAllocation(currentRow!.id),
+    enabled: open && currentRow?.role === 1,
+    staleTime: 30 * 1000,
+  })
+  const codexAllocation = codexAllocationQuery.data?.success
+    ? codexAllocationQuery.data.data
+    : undefined
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
@@ -134,7 +161,26 @@ export function UsersMutateDrawer({
   const tokensOnly = currencyMeta.kind === 'tokens'
 
   const currentQuotaRaw = form.watch('quota_dollars') || 0
+  const currentCodexSharePercent = form.watch('codex_quota_share_percent') || 0
   const currentCodexBonusBps = form.watch('codex_quota_bonus_bps') || 0
+  const previewEffectiveBps =
+    Math.round(currentCodexSharePercent * 100) + currentCodexBonusBps
+  const previewAllocatedUnits = codexAllocation
+    ? Math.floor(
+        (codexAllocation.pool_capacity_units * previewEffectiveBps) / 10_000
+      )
+    : 0
+  const settledUsedUnits = codexAllocation
+    ? (codexAllocation.settled_used_units ?? codexAllocation.used_units)
+    : 0
+  const previewRemainingUnits = Math.max(
+    0,
+    previewAllocatedUnits - settledUsedUnits
+  )
+  const previewUsagePercent =
+    previewAllocatedUnits > 0
+      ? Math.min(100, (settledUsedUnits / previewAllocatedUnits) * 100)
+      : 0
 
   const onSubmit = async (data: UserFormValues) => {
     if (!isUpdate) {
@@ -201,6 +247,7 @@ export function UsersMutateDrawer({
     if (result.success && result.data) {
       form.reset(transformUserToFormDefaults(result.data))
     }
+    await codexAllocationQuery.refetch()
     triggerRefresh()
   }
 
@@ -484,6 +531,59 @@ export function UsersMutateDrawer({
                           {t('Adjust')}
                         </Button>
                       </div>
+                      {codexAllocation ? (
+                        <div className='bg-muted/40 space-y-3 rounded-md border p-3'>
+                          <div className='grid grid-cols-2 gap-3 text-sm'>
+                            <div>
+                              <div className='text-muted-foreground text-xs'>
+                                {getEstimatedPoolLabel(
+                                  t,
+                                  codexAllocation.window_type
+                                )}
+                              </div>
+                              <div className='font-semibold tabular-nums'>
+                                {formatCodexQuotaUnits(
+                                  codexAllocation.pool_capacity_units
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <div className='text-muted-foreground text-xs'>
+                                {t('Allocation preview')}
+                              </div>
+                              <div className='font-semibold tabular-nums'>
+                                {formatCodexQuotaUnits(previewAllocatedUnits)}
+                              </div>
+                            </div>
+                            <div>
+                              <div className='text-muted-foreground text-xs'>
+                                {t('Used units')}
+                              </div>
+                              <div className='font-semibold tabular-nums'>
+                                {formatCodexQuotaUnits(settledUsedUnits)}
+                              </div>
+                            </div>
+                            <div>
+                              <div className='text-muted-foreground text-xs'>
+                                {t('Remaining quota units')}
+                              </div>
+                              <div className='font-semibold tabular-nums'>
+                                {formatCodexQuotaUnits(previewRemainingUnits)}
+                              </div>
+                            </div>
+                          </div>
+                          <Progress value={previewUsagePercent} />
+                          <p className='text-muted-foreground text-xs'>
+                            {t(
+                              'Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.'
+                            )}
+                          </p>
+                        </div>
+                      ) : codexAllocationQuery.isLoading ? (
+                        <div className='text-muted-foreground text-xs'>
+                          {t('Loading...')}
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </SideDrawerSection>

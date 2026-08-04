@@ -1,5 +1,14 @@
 {
   "translation": {
+    "Allocation preview": "割り当てプレビュー",
+    "Allocated units": "割り当て済み単位",
+    "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.": "上流の完全なクォータ枠1つを1,000,000推定単位として扱います。これはトークン数ではありません。",
+    "Estimated long-term quota pool": "推定長期クォータプール",
+    "Estimated monthly quota pool": "推定月間クォータプール",
+    "Estimated weekly quota pool": "推定週間クォータプール",
+    "Remaining quota units": "残りクォータ単位",
+    "Total Allocated": "割り当て合計",
+    "Used units": "使用済み単位",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_one": " + Web検索 {{count}}回 / 1K回 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_one",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_other": " + Web検索 {{count}}回 / 1K回 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_other",
     " + 图片生成调用 {{symbol}}{{price}} / 1次 * {{ratioType}} {{ratio}}": " + 画像生成APIコール {{symbol}}{{price}} / 1回 * {{ratioType}} {{ratio}}",

@@ -1,5 +1,14 @@
 {
   "translation": {
+    "Allocation preview": "分配預覽",
+    "Allocated units": "已分配額度單位",
+    "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.": "每個完整的上游額度週期按 1,000,000 個估算單位計算，這不是 Token 數量。",
+    "Estimated long-term quota pool": "預估長期額度池",
+    "Estimated monthly quota pool": "預估月額度池",
+    "Estimated weekly quota pool": "預估週額度池",
+    "Remaining quota units": "剩餘額度單位",
+    "Total Allocated": "總分配",
+    "Used units": "已使用額度單位",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_other": " + Web搜尋 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",
     " + 图片生成调用 {{symbol}}{{price}} / 1次 * {{ratioType}} {{ratio}}": " + 圖片生成調用 {{symbol}}{{price}} / 1次 * {{ratioType}} {{ratio}}",
     " + 文件搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_other": " + 檔案搜尋 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",

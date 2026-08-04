@@ -1,5 +1,14 @@
 {
   "translation": {
+    "Allocation preview": "Aperçu de l’attribution",
+    "Allocated units": "Unités attribuées",
+    "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.": "Chaque fenêtre complète de quota en amont équivaut à 1 000 000 d’unités estimées ; il ne s’agit pas d’un nombre de jetons.",
+    "Estimated long-term quota pool": "Pool de quota à long terme estimé",
+    "Estimated monthly quota pool": "Pool de quota mensuel estimé",
+    "Estimated weekly quota pool": "Pool de quota hebdomadaire estimé",
+    "Remaining quota units": "Unités de quota restantes",
+    "Total Allocated": "Total attribué",
+    "Used units": "Unités utilisées",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_one": " + Recherche Web {{count}} fois / 1K fois * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_many": " + Recherche Web {{count}} fois / 1K fois * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_other": " + Recherche Web {{count}} fois / 1K fois * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",

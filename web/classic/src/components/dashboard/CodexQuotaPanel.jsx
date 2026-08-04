@@ -45,6 +45,15 @@ const formatAllocatedUsagePercent = (usedUnits, allocatedUnits) => {
   return `${percentage.toFixed(1)}%`;
 };
 
+const formatCodexQuotaUnits = (value) =>
+  Math.max(0, Math.round(Number(value) || 0)).toLocaleString();
+
+const getEstimatedPoolLabel = (t, windowType) => {
+  if (windowType === 'weekly') return t('Estimated weekly quota pool');
+  if (windowType === 'monthly') return t('Estimated monthly quota pool');
+  return t('Estimated long-term quota pool');
+};
+
 const formatResetTime = (value) => {
   if (!value || value <= 0) return '';
   return new Intl.DateTimeFormat(undefined, {
@@ -157,67 +166,70 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
   const refreshInFlightRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadCodexQuotas = useCallback(async (forceRefresh = false) => {
-    if (refreshInFlightRef.current) {
-      return;
-    }
-    refreshInFlightRef.current = true;
-    setRefreshing(true);
-    setError('');
-    try {
-      const requests = [
-        API.get('/api/external/codex-quotas', {
-          params: forceRefresh ? { refresh: 1 } : undefined,
-          disableDuplicate: true,
-          skipErrorHandler: true,
-        }),
-        API.get('/api/external/codex-quota-allocation', {
-          disableDuplicate: true,
-          skipErrorHandler: true,
-        }),
-      ];
-      if (isAdmin()) {
-        requests.push(
-          API.get('/api/external/codex-quota-pool', {
+  const loadCodexQuotas = useCallback(
+    async (forceRefresh = false) => {
+      if (refreshInFlightRef.current) {
+        return;
+      }
+      refreshInFlightRef.current = true;
+      setRefreshing(true);
+      setError('');
+      try {
+        const requests = [
+          API.get('/api/external/codex-quotas', {
+            params: forceRefresh ? { refresh: 1 } : undefined,
             disableDuplicate: true,
             skipErrorHandler: true,
           }),
-        );
-      }
-      const [quotaResult, allocationResult, poolResult] =
-        await Promise.allSettled(requests);
+          API.get('/api/external/codex-quota-allocation', {
+            disableDuplicate: true,
+            skipErrorHandler: true,
+          }),
+        ];
+        if (isAdmin()) {
+          requests.push(
+            API.get('/api/external/codex-quota-pool', {
+              disableDuplicate: true,
+              skipErrorHandler: true,
+            }),
+          );
+        }
+        const [quotaResult, allocationResult, poolResult] =
+          await Promise.allSettled(requests);
 
-      if (
-        quotaResult.status === 'fulfilled' &&
-        quotaResult.value.data.success
-      ) {
-        setQuotaData(quotaResult.value.data.data);
-      } else {
-        const message =
-          quotaResult.status === 'fulfilled'
-            ? quotaResult.value.data.message
-            : quotaResult.reason?.response?.data?.message ||
-              quotaResult.reason?.message;
-        setQuotaData(null);
-        setError(message || t('Codex quota unavailable'));
+        if (
+          quotaResult.status === 'fulfilled' &&
+          quotaResult.value.data.success
+        ) {
+          setQuotaData(quotaResult.value.data.data);
+        } else {
+          const message =
+            quotaResult.status === 'fulfilled'
+              ? quotaResult.value.data.message
+              : quotaResult.reason?.response?.data?.message ||
+                quotaResult.reason?.message;
+          setQuotaData(null);
+          setError(message || t('Codex quota unavailable'));
+        }
+        if (
+          allocationResult.status === 'fulfilled' &&
+          allocationResult.value.data.success
+        ) {
+          setAllocationData(allocationResult.value.data.data);
+        }
+        setPoolData(
+          poolResult?.status === 'fulfilled' && poolResult.value.data.success
+            ? poolResult.value.data.data
+            : null,
+        );
+      } finally {
+        refreshInFlightRef.current = false;
+        setLoading(false);
+        setRefreshing(false);
       }
-      if (
-        allocationResult.status === 'fulfilled' &&
-        allocationResult.value.data.success
-      ) {
-        setAllocationData(allocationResult.value.data.data);
-      }
-      setPoolData(
-        poolResult?.status === 'fulfilled' && poolResult.value.data.success
-          ? poolResult.value.data.data
-          : null,
-      );
-    } finally {
-      refreshInFlightRef.current = false;
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [t]);
+    },
+    [t],
+  );
 
   useEffect(() => {
     loadCodexQuotas();
@@ -262,38 +274,70 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
     >
       <div className='p-3'>
         {allocationData?.enabled && (
-          <div className='mb-3 grid grid-cols-3 gap-2 rounded-xl border border-gray-100 p-2 text-center text-xs'>
-            <div>
-              <div className='text-gray-500'>{t('已分配')}</div>
-              <div className='font-semibold tabular-nums'>
-                {(allocationData.effective_bps / 100).toFixed(2)}%
+          <>
+            <div className='mb-3 grid grid-cols-3 gap-2 rounded-xl border border-gray-100 p-2 text-center text-xs'>
+              <div>
+                <div className='text-gray-500'>{t('已分配')}</div>
+                <div className='font-semibold tabular-nums'>
+                  {(allocationData.effective_bps / 100).toFixed(2)}%
+                </div>
+              </div>
+              <div>
+                <div className='text-gray-500'>{t('已确认使用')}</div>
+                <div className='font-semibold tabular-nums'>
+                  {formatAllocatedUsagePercent(
+                    allocationData.settled_used_units ??
+                      allocationData.used_units,
+                    allocationData.allocated_units,
+                  )}
+                </div>
+              </div>
+              <div>
+                <div className='text-gray-500'>{t('状态')}</div>
+                <div className='font-semibold'>
+                  {allocationData.unattributed_weight > 0
+                    ? t('需要核查')
+                    : allocationData.stale
+                      ? t('同步已过期')
+                      : !allocationData.pool_available
+                        ? t('Codex quota unavailable')
+                        : allocationData.pending_weight > 0
+                          ? t('等待中')
+                          : t('正常')}
+                </div>
               </div>
             </div>
-            <div>
-              <div className='text-gray-500'>{t('已确认使用')}</div>
-              <div className='font-semibold tabular-nums'>
-                {formatAllocatedUsagePercent(
-                  allocationData.settled_used_units ??
-                    allocationData.used_units,
-                  allocationData.allocated_units,
-                )}
+            <div className='mb-2 grid grid-cols-3 gap-2 rounded-xl border border-gray-100 p-2 text-center text-xs'>
+              <div>
+                <div className='text-gray-500'>{t('Allocated units')}</div>
+                <div className='font-semibold tabular-nums'>
+                  {formatCodexQuotaUnits(allocationData.allocated_units)}
+                </div>
+              </div>
+              <div>
+                <div className='text-gray-500'>{t('Used units')}</div>
+                <div className='font-semibold tabular-nums'>
+                  {formatCodexQuotaUnits(
+                    allocationData.settled_used_units ??
+                      allocationData.used_units,
+                  )}
+                </div>
+              </div>
+              <div>
+                <div className='text-gray-500'>
+                  {t('Remaining quota units')}
+                </div>
+                <div className='font-semibold tabular-nums'>
+                  {formatCodexQuotaUnits(allocationData.remaining_units)}
+                </div>
               </div>
             </div>
-            <div>
-              <div className='text-gray-500'>{t('状态')}</div>
-              <div className='font-semibold'>
-                {allocationData.unattributed_weight > 0
-                  ? t('需要核查')
-                  : allocationData.stale
-                    ? t('同步已过期')
-                    : !allocationData.pool_available
-                      ? t('Codex quota unavailable')
-                      : allocationData.pending_weight > 0
-                        ? t('等待中')
-                        : t('正常')}
-              </div>
+            <div className='mb-3 text-center text-xs text-gray-500'>
+              {t(
+                'Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.',
+              )}
             </div>
-          </div>
+          </>
         )}
 
         {allocationData?.unattributed_weight > 0 && (
@@ -311,30 +355,40 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
         )}
 
         {isAdmin() && poolData && (
-          <div className='mb-3 grid grid-cols-3 gap-2 rounded-xl border border-gray-100 p-2 text-center text-xs'>
+          <div className='mb-3 grid grid-cols-2 gap-2 rounded-xl border border-gray-100 p-2 text-center text-xs'>
+            <div>
+              <div className='text-gray-500'>
+                {getEstimatedPoolLabel(t, poolData.window_type)}
+              </div>
+              <div className='font-semibold tabular-nums'>
+                {formatCodexQuotaUnits(poolData.pool_capacity_units)}
+              </div>
+            </div>
+            <div>
+              <div className='text-gray-500'>{t('Used units')}</div>
+              <div className='font-semibold tabular-nums'>
+                {formatCodexQuotaUnits(poolData.pool_used_units)}
+              </div>
+            </div>
             <div>
               <div className='text-gray-500'>{t('额度池剩余')}</div>
               <div className='font-semibold tabular-nums'>
-                {poolData.pool_capacity_units > 0
-                  ? `${(
-                      (poolData.pool_remaining_units /
-                        poolData.pool_capacity_units) *
-                      100
-                    ).toFixed(1)}%`
-                  : '0%'}
+                {formatCodexQuotaUnits(poolData.pool_remaining_units)}
               </div>
             </div>
             <div>
-              <div className='text-gray-500'>{t('已分配份额')}</div>
+              <div className='text-gray-500'>{t('Total Allocated')}</div>
               <div className='font-semibold tabular-nums'>
-                {(poolData.allocated_bps / 100).toFixed(2)}%
+                {formatCodexQuotaUnits(poolData.allocated_units)}
               </div>
             </div>
-            <div>
-              <div className='text-gray-500'>{t('纳入凭证数')}</div>
-              <div className='font-semibold tabular-nums'>
-                {poolData.included_count}
-              </div>
+            <div className='col-span-2 flex justify-center gap-3 text-gray-500'>
+              <span>
+                {t('已分配份额')}: {(poolData.allocated_bps / 100).toFixed(2)}%
+              </span>
+              <span>
+                {t('纳入凭证数')}: {poolData.included_count}
+              </span>
             </div>
           </div>
         )}

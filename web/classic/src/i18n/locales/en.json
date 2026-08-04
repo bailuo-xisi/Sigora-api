@@ -1,5 +1,14 @@
 {
   "translation": {
+    "Allocation preview": "Allocation preview",
+    "Allocated units": "Allocated units",
+    "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.": "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.",
+    "Estimated long-term quota pool": "Estimated long-term quota pool",
+    "Estimated monthly quota pool": "Estimated monthly quota pool",
+    "Estimated weekly quota pool": "Estimated weekly quota pool",
+    "Remaining quota units": "Remaining quota units",
+    "Total Allocated": "Total Allocated",
+    "Used units": "Used units",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_one": " + Web search {{count}} time / 1K times * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_other": " + Web search {{count}} times / 1K times * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",
     " + 图片生成调用 {{symbol}}{{price}} / 1次 * {{ratioType}} {{ratio}}": " + Image generation call {{symbol}}{{price}} / 1 time * {{ratioType}} {{ratio}}",

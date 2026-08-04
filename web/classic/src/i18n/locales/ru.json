@@ -1,5 +1,14 @@
 {
   "translation": {
+    "Allocation preview": "Предварительный расчёт распределения",
+    "Allocated units": "Выделенные единицы",
+    "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.": "Одно полное окно квоты вышестоящего сервиса принимается за 1 000 000 расчётных единиц; это не количество токенов.",
+    "Estimated long-term quota pool": "Расчётный долгосрочный пул квоты",
+    "Estimated monthly quota pool": "Расчётный месячный пул квоты",
+    "Estimated weekly quota pool": "Расчётный недельный пул квоты",
+    "Remaining quota units": "Оставшиеся единицы квоты",
+    "Total Allocated": "Всего выделено",
+    "Used units": "Использованные единицы",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_one": " + Web-поиск {{count}} раз / 1K раз * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_few": " + Web-поиск {{count}} раза / 1K раз * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_many": " + Web-поиск {{count}} раз / 1K раз * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",

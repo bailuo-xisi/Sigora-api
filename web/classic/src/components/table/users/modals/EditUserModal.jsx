@@ -60,6 +60,75 @@ import UserBindingManagementModal from './UserBindingManagementModal';
 
 const { Text, Title } = Typography;
 
+const formatCodexQuotaUnits = (value) =>
+  Math.max(0, Math.round(Number(value) || 0)).toLocaleString();
+
+const getEstimatedPoolLabel = (t, windowType) => {
+  if (windowType === 'weekly') return t('Estimated weekly quota pool');
+  if (windowType === 'monthly') return t('Estimated monthly quota pool');
+  return t('Estimated long-term quota pool');
+};
+
+const CodexAllocationPreview = ({ t, allocation, sharePercent, bonusBps }) => {
+  if (!allocation) return null;
+
+  const effectiveBps =
+    Math.round(Number(sharePercent || 0) * 100) + Number(bonusBps || 0);
+  const allocatedUnits = Math.floor(
+    (allocation.pool_capacity_units * effectiveBps) / 10000,
+  );
+  const usedUnits = allocation.settled_used_units ?? allocation.used_units ?? 0;
+  const remainingUnits = Math.max(0, allocatedUnits - usedUnits);
+  const usagePercent =
+    allocatedUnits > 0 ? Math.min(100, (usedUnits / allocatedUnits) * 100) : 0;
+
+  return (
+    <div className='mt-3 space-y-3 rounded-xl border border-gray-100 bg-gray-50 p-3'>
+      <div className='grid grid-cols-2 gap-3 text-sm'>
+        <div>
+          <div className='text-xs text-gray-500'>
+            {getEstimatedPoolLabel(t, allocation.window_type)}
+          </div>
+          <div className='font-semibold tabular-nums'>
+            {formatCodexQuotaUnits(allocation.pool_capacity_units)}
+          </div>
+        </div>
+        <div>
+          <div className='text-xs text-gray-500'>{t('Allocation preview')}</div>
+          <div className='font-semibold tabular-nums'>
+            {formatCodexQuotaUnits(allocatedUnits)}
+          </div>
+        </div>
+        <div>
+          <div className='text-xs text-gray-500'>{t('Used units')}</div>
+          <div className='font-semibold tabular-nums'>
+            {formatCodexQuotaUnits(usedUnits)}
+          </div>
+        </div>
+        <div>
+          <div className='text-xs text-gray-500'>
+            {t('Remaining quota units')}
+          </div>
+          <div className='font-semibold tabular-nums'>
+            {formatCodexQuotaUnits(remainingUnits)}
+          </div>
+        </div>
+      </div>
+      <div className='h-1.5 overflow-hidden rounded-full bg-gray-200'>
+        <div
+          className='h-full rounded-full bg-blue-500 transition-all'
+          style={{ width: `${usagePercent}%` }}
+        />
+      </div>
+      <div className='text-xs text-gray-500'>
+        {t(
+          'Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.',
+        )}
+      </div>
+    </div>
+  );
+};
+
 const EditUserModal = (props) => {
   const { t } = useTranslation();
   const userId = props.editingUser.id;
@@ -80,6 +149,7 @@ const EditUserModal = (props) => {
   const [showAdjustQuotaRaw, setShowAdjustQuotaRaw] = useState(false);
   const [showQuotaInput, setShowQuotaInput] = useState(false);
   const [inputs, setInputs] = useState(null);
+  const [codexAllocationData, setCodexAllocationData] = useState(null);
 
   const isEdit = Boolean(userId);
 
@@ -115,6 +185,7 @@ const EditUserModal = (props) => {
 
   const loadUser = async () => {
     setLoading(true);
+    setCodexAllocationData(null);
     const url = userId ? `/api/user/${userId}` : `/api/user/self`;
     const res = await API.get(url);
     const { success, message, data } = res.data;
@@ -127,6 +198,18 @@ const EditUserModal = (props) => {
         ((data.codex_quota_share_bps || 0) / 100).toFixed(2),
       );
       setInputs({ ...getInitValues(), ...data });
+      if (userId && data.role === 1) {
+        try {
+          const allocationRes = await API.get(
+            `/api/user/${userId}/codex-quota-allocation`,
+          );
+          if (allocationRes.data.success) {
+            setCodexAllocationData(allocationRes.data.data);
+          }
+        } catch {
+          setCodexAllocationData(null);
+        }
+      }
     } else {
       showError(message);
     }
@@ -505,6 +588,12 @@ const EditUserModal = (props) => {
                                 {t('调整')}
                               </Button>
                             </div>
+                            <CodexAllocationPreview
+                              t={t}
+                              allocation={codexAllocationData}
+                              sharePercent={values.codex_quota_share_percent}
+                              bonusBps={values.codex_quota_bonus_bps}
+                            />
                           </div>
                         </Col>
                       )}

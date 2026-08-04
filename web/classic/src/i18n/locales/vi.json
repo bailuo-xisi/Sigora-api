@@ -1,5 +1,14 @@
 {
   "translation": {
+    "Allocation preview": "Xem trước phân bổ",
+    "Allocated units": "Đơn vị đã phân bổ",
+    "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.": "Mỗi cửa sổ hạn mức thượng nguồn đầy đủ được tính là 1.000.000 đơn vị ước tính; đây không phải số token.",
+    "Estimated long-term quota pool": "Tổng hạn mức dài hạn ước tính",
+    "Estimated monthly quota pool": "Tổng hạn mức tháng ước tính",
+    "Estimated weekly quota pool": "Tổng hạn mức tuần ước tính",
+    "Remaining quota units": "Đơn vị hạn mức còn lại",
+    "Total Allocated": "Tổng đã phân bổ",
+    "Used units": "Đơn vị đã dùng",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_one": " + Tìm kiếm Web {{count}} lần / 1K lần * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",
     " + Web搜索 {{count}}次 / 1K 次 * {{symbol}}{{price}} * {{ratioType}} {{ratio}}_other": " + Tìm kiếm Web {{count}} lần / 1K lần * {{symbol}}{{price}} * {{ratioType}} {{ratio}}",
     " + 图片生成调用 {{symbol}}{{price}} / 1次 * {{ratioType}} {{ratio}}": " + Gọi tạo hình ảnh {{symbol}}{{price}} / 1 lần * {{ratioType}} {{ratio}}",

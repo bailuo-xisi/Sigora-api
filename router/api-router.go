@@ -138,6 +138,7 @@ func SetApiRouter(router *gin.Engine) {
 				adminRoute.POST("/", controller.CreateUser)
 				adminRoute.POST("/manage", controller.ManageUser)
 				adminRoute.PUT("/", controller.UpdateUser)
+				adminRoute.GET("/:id/codex-quota-allocation", controller.GetUserCodexQuotaAllocation)
 				adminRoute.PUT("/:id/codex-quota-allocation", controller.UpdateUserCodexQuotaAllocation)
 				adminRoute.POST("/:id/codex-quota-bonus", controller.UpdateUserCodexQuotaBonus)
 				adminRoute.DELETE("/:id", controller.DeleteUser)

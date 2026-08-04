@@ -57,6 +57,21 @@ func TestCodexQuotaPoolAvailabilityRequiresUsableCycle(t *testing.T) {
 	assert.False(t, isCodexQuotaPoolAvailable(CodexQuotaPoolSummary{}, cycles, state, now))
 }
 
+func TestCodexQuotaWindowType(t *testing.T) {
+	assert.Equal(t, "", codexQuotaWindowType(nil))
+	assert.Equal(t, "weekly", codexQuotaWindowType([]model.CodexQuotaCycle{
+		{WindowType: "weekly"},
+		{WindowType: "weekly"},
+	}))
+	assert.Equal(t, "monthly", codexQuotaWindowType([]model.CodexQuotaCycle{
+		{WindowType: "monthly"},
+	}))
+	assert.Equal(t, "mixed", codexQuotaWindowType([]model.CodexQuotaCycle{
+		{WindowType: "weekly"},
+		{WindowType: "monthly"},
+	}))
+}
+
 func TestSyncCodexQuotaAllocationUsesOutboundWeightBeforeResponseCompletes(t *testing.T) {
 	resetManagementCodexQuotaCacheForTest()
 

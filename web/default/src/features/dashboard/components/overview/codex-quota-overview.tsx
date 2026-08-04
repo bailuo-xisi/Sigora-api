@@ -32,6 +32,7 @@ import {
   getCodexQuotas,
 } from '@/features/dashboard/api'
 import type {
+  CodexQuotaAllocationResult,
   CodexQuotaItem,
   CodexQuotaWindow,
 } from '@/features/dashboard/types'
@@ -59,6 +60,19 @@ function formatAllocatedUsagePercent(
   const percentage = Math.min(100, (usedUnits / allocatedUnits) * 100)
   if (percentage < 0.1) return '<0.1%'
   return `${percentage.toFixed(1)}%`
+}
+
+function formatCodexQuotaUnits(value: number) {
+  return Math.max(0, Math.round(value)).toLocaleString()
+}
+
+function getEstimatedPoolLabel(
+  t: TFunction,
+  windowType: CodexQuotaAllocationResult['window_type']
+) {
+  if (windowType === 'weekly') return t('Estimated weekly quota pool')
+  if (windowType === 'monthly') return t('Estimated monthly quota pool')
+  return t('Estimated long-term quota pool')
 }
 
 function formatResetTime(value?: number | null) {
@@ -314,6 +328,37 @@ export function CodexQuotaOverview() {
               </div>
             </div>
           </div>
+          <div className='border-border/70 grid grid-cols-3 gap-2 rounded-lg border px-2.5 py-2 text-center text-xs'>
+            <div>
+              <div className='text-muted-foreground'>
+                {t('Allocated units')}
+              </div>
+              <div className='font-semibold tabular-nums'>
+                {formatCodexQuotaUnits(allocation.allocated_units)}
+              </div>
+            </div>
+            <div>
+              <div className='text-muted-foreground'>{t('Used units')}</div>
+              <div className='font-semibold tabular-nums'>
+                {formatCodexQuotaUnits(
+                  allocation.settled_used_units ?? allocation.used_units
+                )}
+              </div>
+            </div>
+            <div>
+              <div className='text-muted-foreground'>
+                {t('Remaining quota units')}
+              </div>
+              <div className='font-semibold tabular-nums'>
+                {formatCodexQuotaUnits(allocation.remaining_units)}
+              </div>
+            </div>
+          </div>
+          <div className='text-muted-foreground text-center text-[11px]'>
+            {t(
+              'Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.'
+            )}
+          </div>
           {allocation.unattributed_weight > 0 ? (
             <div className='text-muted-foreground text-center text-xs tabular-nums'>
               {t('Estimated review weight')}:{' '}
@@ -330,28 +375,40 @@ export function CodexQuotaOverview() {
       ) : null}
 
       {isAdmin && pool ? (
-        <div className='border-border/70 grid grid-cols-3 gap-2 rounded-lg border px-2.5 py-2 text-center text-xs'>
+        <div className='border-border/70 grid grid-cols-2 gap-2 rounded-lg border px-2.5 py-2 text-center text-xs'>
+          <div>
+            <div className='text-muted-foreground'>
+              {getEstimatedPoolLabel(t, pool.window_type)}
+            </div>
+            <div className='font-semibold tabular-nums'>
+              {formatCodexQuotaUnits(pool.pool_capacity_units)}
+            </div>
+          </div>
+          <div>
+            <div className='text-muted-foreground'>{t('Used units')}</div>
+            <div className='font-semibold tabular-nums'>
+              {formatCodexQuotaUnits(pool.pool_used_units)}
+            </div>
+          </div>
           <div>
             <div className='text-muted-foreground'>{t('Pool Remaining')}</div>
             <div className='font-semibold tabular-nums'>
-              {pool.pool_capacity_units > 0
-                ? `${((pool.pool_remaining_units / pool.pool_capacity_units) * 100).toFixed(1)}%`
-                : '0%'}
+              {formatCodexQuotaUnits(pool.pool_remaining_units)}
             </div>
           </div>
           <div>
-            <div className='text-muted-foreground'>{t('Allocated Shares')}</div>
+            <div className='text-muted-foreground'>{t('Total Allocated')}</div>
             <div className='font-semibold tabular-nums'>
-              {(pool.allocated_bps / 100).toFixed(2)}%
+              {formatCodexQuotaUnits(pool.allocated_units)}
             </div>
           </div>
-          <div>
-            <div className='text-muted-foreground'>
-              {t('Included Credentials')}
-            </div>
-            <div className='font-semibold tabular-nums'>
-              {pool.included_count}
-            </div>
+          <div className='text-muted-foreground col-span-2 flex justify-center gap-3 text-[11px]'>
+            <span>
+              {t('Allocated Shares')}: {(pool.allocated_bps / 100).toFixed(2)}%
+            </span>
+            <span>
+              {t('Included Credentials')}: {pool.included_count}
+            </span>
           </div>
         </div>
       ) : null}

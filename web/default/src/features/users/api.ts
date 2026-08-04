@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { api } from '@/lib/api'
+import type { CodexQuotaAllocationResult } from '@/features/dashboard/types'
 import type {
   User,
   GetUsersParams,
@@ -135,6 +136,13 @@ export async function updateUserCodexQuotaAllocation(
     `/api/user/${userId}/codex-quota-allocation`,
     payload
   )
+  return res.data
+}
+
+export async function getUserCodexQuotaAllocation(
+  userId: number
+): Promise<ApiResponse<CodexQuotaAllocationResult>> {
+  const res = await api.get(`/api/user/${userId}/codex-quota-allocation`)
   return res.data
 }
 

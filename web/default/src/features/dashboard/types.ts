@@ -64,6 +64,7 @@ export interface CodexQuotasResult {
 export interface CodexQuotaAllocationResult {
   enabled: boolean
   pool_available: boolean
+  window_type: 'weekly' | 'monthly' | 'mixed' | ''
   share_bps: number
   bonus_bps: number
   effective_bps: number
@@ -87,9 +88,11 @@ export interface CodexQuotaAllocationResult {
 export interface CodexQuotaPoolResult {
   enabled: boolean
   pool_available: boolean
+  window_type: 'weekly' | 'monthly' | 'mixed' | ''
   pool_capacity_units: number
   pool_used_units: number
   pool_remaining_units: number
+  allocated_units: number
   included_count: number
   excluded_count: number
   allocated_bps: number

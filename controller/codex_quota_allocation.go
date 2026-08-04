@@ -96,6 +96,20 @@ func GetSelfCodexQuotaAllocation(c *gin.Context) {
 	common.ApiSuccess(c, summary)
 }
 
+func GetUserCodexQuotaAllocation(c *gin.Context) {
+	userId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	summary, err := service.GetCodexQuotaAllocationSummary(userId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, summary)
+}
+
 func GetCodexQuotaPool(c *gin.Context) {
 	summary, err := service.GetCodexQuotaPoolSummary()
 	if err != nil {

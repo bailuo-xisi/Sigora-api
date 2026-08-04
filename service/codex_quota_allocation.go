@@ -28,39 +28,42 @@ const (
 )
 
 type CodexQuotaAllocationSummary struct {
-	Enabled            bool  `json:"enabled"`
-	PoolAvailable      bool  `json:"pool_available"`
-	ShareBps           int   `json:"share_bps"`
-	BonusBps           int   `json:"bonus_bps"`
-	EffectiveBps       int   `json:"effective_bps"`
-	PoolCapacityUnits  int64 `json:"pool_capacity_units"`
-	PoolUsedUnits      int64 `json:"pool_used_units"`
-	PoolRemainUnits    int64 `json:"pool_remaining_units"`
-	AllocatedUnits     int64 `json:"allocated_units"`
-	UsedUnits          int64 `json:"used_units"`
-	SettledUsedUnits   int64 `json:"settled_used_units"`
-	RemainingUnits     int64 `json:"remaining_units"`
-	PendingWeight      int64 `json:"pending_weight"`
-	PendingSince       int64 `json:"pending_since"`
-	UnattributedWeight int64 `json:"unattributed_weight"`
-	UnattributedSince  int64 `json:"unattributed_since"`
-	IncludedCount      int   `json:"included_count"`
-	ExcludedCount      int   `json:"excluded_count"`
-	LastUpdatedAt      int64 `json:"last_updated_at"`
-	Stale              bool  `json:"stale"`
+	Enabled            bool   `json:"enabled"`
+	PoolAvailable      bool   `json:"pool_available"`
+	WindowType         string `json:"window_type"`
+	ShareBps           int    `json:"share_bps"`
+	BonusBps           int    `json:"bonus_bps"`
+	EffectiveBps       int    `json:"effective_bps"`
+	PoolCapacityUnits  int64  `json:"pool_capacity_units"`
+	PoolUsedUnits      int64  `json:"pool_used_units"`
+	PoolRemainUnits    int64  `json:"pool_remaining_units"`
+	AllocatedUnits     int64  `json:"allocated_units"`
+	UsedUnits          int64  `json:"used_units"`
+	SettledUsedUnits   int64  `json:"settled_used_units"`
+	RemainingUnits     int64  `json:"remaining_units"`
+	PendingWeight      int64  `json:"pending_weight"`
+	PendingSince       int64  `json:"pending_since"`
+	UnattributedWeight int64  `json:"unattributed_weight"`
+	UnattributedSince  int64  `json:"unattributed_since"`
+	IncludedCount      int    `json:"included_count"`
+	ExcludedCount      int    `json:"excluded_count"`
+	LastUpdatedAt      int64  `json:"last_updated_at"`
+	Stale              bool   `json:"stale"`
 }
 
 type CodexQuotaPoolSummary struct {
-	Enabled           bool  `json:"enabled"`
-	PoolAvailable     bool  `json:"pool_available"`
-	PoolCapacityUnits int64 `json:"pool_capacity_units"`
-	PoolUsedUnits     int64 `json:"pool_used_units"`
-	PoolRemainUnits   int64 `json:"pool_remaining_units"`
-	IncludedCount     int   `json:"included_count"`
-	ExcludedCount     int   `json:"excluded_count"`
-	AllocatedBps      int64 `json:"allocated_bps"`
-	LastUpdatedAt     int64 `json:"last_updated_at"`
-	Stale             bool  `json:"stale"`
+	Enabled           bool   `json:"enabled"`
+	PoolAvailable     bool   `json:"pool_available"`
+	WindowType        string `json:"window_type"`
+	PoolCapacityUnits int64  `json:"pool_capacity_units"`
+	PoolUsedUnits     int64  `json:"pool_used_units"`
+	PoolRemainUnits   int64  `json:"pool_remaining_units"`
+	AllocatedUnits    int64  `json:"allocated_units"`
+	IncludedCount     int    `json:"included_count"`
+	ExcludedCount     int    `json:"excluded_count"`
+	AllocatedBps      int64  `json:"allocated_bps"`
+	LastUpdatedAt     int64  `json:"last_updated_at"`
+	Stale             bool   `json:"stale"`
 }
 
 type codexCycleDelta struct {
@@ -701,6 +704,7 @@ func GetCodexQuotaAllocationSummary(userId int) (*CodexQuotaAllocationSummary, e
 	return &CodexQuotaAllocationSummary{
 		Enabled:            operation_setting.CodexQuotaAllocationEnabled,
 		PoolAvailable:      poolAvailable,
+		WindowType:         pool.WindowType,
 		ShareBps:           share,
 		BonusBps:           bonus,
 		EffectiveBps:       effective,
@@ -833,6 +837,7 @@ func GetCodexQuotaPoolSummary() (*CodexQuotaPoolSummary, error) {
 	pool.Enabled = operation_setting.CodexQuotaAllocationEnabled
 	pool.PoolAvailable = isCodexQuotaPoolAvailable(pool, cycles, state, now)
 	pool.AllocatedBps = allocated
+	pool.AllocatedUnits = pool.PoolCapacityUnits * allocated / model.CodexQuotaMaxBps
 	pool.IncludedCount = len(cycles)
 	pool.ExcludedCount = state.ExcludedCount
 	pool.LastUpdatedAt = state.LastSuccessAt
@@ -873,11 +878,29 @@ func loadCodexPoolState() (CodexQuotaPoolSummary, []model.CodexQuotaCycle, model
 		pool.PoolCapacityUnits += cycle.CapacityUnits
 		pool.PoolUsedUnits += cycle.UpstreamUsedUnits
 	}
+	pool.WindowType = codexQuotaWindowType(cycles)
 	pool.PoolRemainUnits = pool.PoolCapacityUnits - pool.PoolUsedUnits
 	if pool.PoolRemainUnits < 0 {
 		pool.PoolRemainUnits = 0
 	}
 	return pool, cycles, state, nil
+}
+
+func codexQuotaWindowType(cycles []model.CodexQuotaCycle) string {
+	windowType := ""
+	for _, cycle := range cycles {
+		if cycle.WindowType == "" {
+			continue
+		}
+		if windowType == "" {
+			windowType = cycle.WindowType
+			continue
+		}
+		if windowType != cycle.WindowType {
+			return "mixed"
+		}
+	}
+	return windowType
 }
 
 func CheckCodexQuotaAccess(c *gin.Context, userId int) *types.NewAPIError {
