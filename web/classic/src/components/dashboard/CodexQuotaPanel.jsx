@@ -54,10 +54,7 @@ const getEstimatedUsedUnits = (allocation) => {
     return Number(allocation.estimated_used_units) || 0;
   }
   return (
-    (Number(allocation?.settled_used_units ?? allocation?.used_units ?? 0) ||
-      0) +
-    (Number(allocation?.pending_weight) || 0) +
-    (Number(allocation?.unattributed_weight) || 0)
+    Number(allocation?.settled_used_units ?? allocation?.used_units ?? 0) || 0
   );
 };
 

@@ -79,9 +79,9 @@ const CodexAllocationPreview = ({ t, allocation, sharePercent, bonusBps }) => {
   );
   const usedUnits =
     allocation.estimated_used_units ??
-    (allocation.settled_used_units ?? allocation.used_units ?? 0) +
-      (allocation.pending_weight ?? 0) +
-      (allocation.unattributed_weight ?? 0);
+    allocation.settled_used_units ??
+    allocation.used_units ??
+    0;
   const remainingUnits = Math.max(0, allocatedUnits - usedUnits);
   const usagePercent =
     allocatedUnits > 0 ? Math.min(100, (usedUnits / allocatedUnits) * 100) : 0;

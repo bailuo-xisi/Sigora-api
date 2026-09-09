@@ -172,9 +172,8 @@ export function UsersMutateDrawer({
     : 0
   const estimatedUsedUnits = codexAllocation
     ? (codexAllocation.estimated_used_units ??
-      (codexAllocation.settled_used_units ?? codexAllocation.used_units) +
-        codexAllocation.pending_weight +
-        codexAllocation.unattributed_weight)
+      codexAllocation.settled_used_units ??
+      codexAllocation.used_units)
     : 0
   const previewRemainingUnits = Math.max(
     0,

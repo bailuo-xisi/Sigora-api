@@ -705,11 +705,12 @@ func GetCodexQuotaAllocationSummary(userId int) (*CodexQuotaAllocationSummary, e
 		}
 	}
 	allocated := pool.PoolCapacityUnits * int64(effective) / model.CodexQuotaMaxBps
-	// The upstream usage endpoint exposes a percentage and may update in coarse
-	// steps. Locally recorded request weights must reserve quota until the next
-	// upstream percentage delta is observed, otherwise both the UI and admission
-	// control can report the full allocation after successful requests.
-	estimatedUsed := used + pending.PendingWeight + pending.UnattributedWeight
+	// Upstream usage is expressed in normalized percentage units, while local
+	// request weights are token-like relative values used only to split an
+	// observed upstream delta between users. They are not interchangeable, so
+	// pending or unattributed request weights must not be subtracted directly
+	// from the user's allocation.
+	estimatedUsed := used
 	remaining := allocated - estimatedUsed
 	if remaining < 0 {
 		remaining = 0

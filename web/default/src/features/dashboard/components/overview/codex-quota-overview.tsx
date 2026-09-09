@@ -71,11 +71,7 @@ function getEstimatedUsedUnits(allocation: CodexQuotaAllocationResult) {
   if (allocation.estimated_used_units !== undefined) {
     return allocation.estimated_used_units
   }
-  return (
-    (allocation.settled_used_units ?? allocation.used_units) +
-    allocation.pending_weight +
-    allocation.unattributed_weight
-  )
+  return allocation.settled_used_units ?? allocation.used_units
 }
 
 function getEstimatedPoolLabel(
