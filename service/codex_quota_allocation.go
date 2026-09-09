@@ -1007,6 +1007,12 @@ func IsCodexQuotaChannel(c *gin.Context) bool {
 	return isCodexQuotaManagedProxyURL(common.GetContextKeyString(c, constant.ContextKeyChannelBaseUrl))
 }
 
+// ShouldUseCodexQuotaAllocation reports whether the current request should be
+// admitted and accounted for by the percentage-based Codex quota pool.
+func ShouldUseCodexQuotaAllocation(c *gin.Context) bool {
+	return operation_setting.CodexQuotaAllocationEnabled && IsCodexQuotaChannel(c)
+}
+
 func isCodexQuotaManagedProxyURL(rawBaseURL string) bool {
 	cfg := getManagementCodexQuotaConfig()
 	if cfg.key == "" {

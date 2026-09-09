@@ -87,6 +87,9 @@ func calculateAudioQuota(info QuotaInfo) int {
 }
 
 func PreWssConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage *dto.RealtimeUsage) error {
+	if relayInfo != nil && relayInfo.UseCodexQuotaAllocation {
+		return nil
+	}
 	if relayInfo.UsePrice {
 		return nil
 	}
@@ -222,8 +225,21 @@ func PostWssConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, mod
 		logger.LogError(ctx, fmt.Sprintf("total tokens is 0, cannot consume quota, userId %d, channelId %d, "+
 			"tokenId %d, model %s， pre-consumed quota %d", relayInfo.UserId, relayInfo.ChannelId, relayInfo.TokenId, modelName, relayInfo.FinalPreConsumedQuota))
 	} else {
-		model.UpdateUserUsedQuotaAndRequestCount(relayInfo.UserId, quota)
+		model.UpdateUserUsedQuotaAndRequestCount(relayInfo.UserId, numericQuotaCharge(relayInfo, quota))
 		model.UpdateChannelUsedQuota(relayInfo.ChannelId, quota)
+	}
+
+	if IsCodexQuotaChannel(ctx) {
+		if err := FinalizeCodexQuotaUsageTracking(
+			ctx,
+			relayInfo.UserId,
+			relayInfo.ChannelId,
+			relayInfo.ChannelMultiKeyIndex,
+			usage.TotalTokens,
+			relayInfo.GetEstimatePromptTokens(),
+		); err != nil {
+			common.SysLog("failed to finalize Codex quota usage weight: " + err.Error())
+		}
 	}
 
 	if err := SettleBilling(ctx, relayInfo, quota); err != nil {
@@ -239,13 +255,14 @@ func PostWssConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, mod
 	if tieredResult != nil {
 		InjectTieredBillingInfo(other, relayInfo, tieredResult)
 	}
+	loggedQuota := numericQuotaCharge(relayInfo, quota)
 	model.RecordConsumeLog(ctx, relayInfo.UserId, model.RecordConsumeLogParams{
 		ChannelId:        relayInfo.ChannelId,
 		PromptTokens:     usage.InputTokens,
 		CompletionTokens: usage.OutputTokens,
 		ModelName:        logModel,
 		TokenName:        tokenName,
-		Quota:            quota,
+		Quota:            loggedQuota,
 		Content:          logContent,
 		TokenId:          relayInfo.TokenId,
 		UseTimeSeconds:   int(useTimeSeconds),
@@ -343,7 +360,7 @@ func PostAudioConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, u
 		logger.LogError(ctx, fmt.Sprintf("total tokens is 0, cannot consume quota, userId %d, channelId %d, "+
 			"tokenId %d, model %s， pre-consumed quota %d", relayInfo.UserId, relayInfo.ChannelId, relayInfo.TokenId, relayInfo.OriginModelName, relayInfo.FinalPreConsumedQuota))
 	} else {
-		model.UpdateUserUsedQuotaAndRequestCount(relayInfo.UserId, quota)
+		model.UpdateUserUsedQuotaAndRequestCount(relayInfo.UserId, numericQuotaCharge(relayInfo, quota))
 		model.UpdateChannelUsedQuota(relayInfo.ChannelId, quota)
 	}
 
@@ -360,13 +377,14 @@ func PostAudioConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, u
 	if tieredResult != nil {
 		InjectTieredBillingInfo(other, relayInfo, tieredResult)
 	}
+	loggedQuota := numericQuotaCharge(relayInfo, quota)
 	model.RecordConsumeLog(ctx, relayInfo.UserId, model.RecordConsumeLogParams{
 		ChannelId:        relayInfo.ChannelId,
 		PromptTokens:     usage.PromptTokens,
 		CompletionTokens: usage.CompletionTokens,
 		ModelName:        logModel,
 		TokenName:        tokenName,
-		Quota:            quota,
+		Quota:            loggedQuota,
 		Content:          logContent,
 		TokenId:          relayInfo.TokenId,
 		UseTimeSeconds:   int(useTimeSeconds),
@@ -382,6 +400,9 @@ func PostAudioConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, u
 func PreConsumeTokenQuota(relayInfo *relaycommon.RelayInfo, quota int) error {
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
+	}
+	if relayInfo != nil && relayInfo.UseCodexQuotaAllocation {
+		return nil
 	}
 	if relayInfo.IsPlayground {
 		return nil
@@ -404,6 +425,9 @@ func PreConsumeTokenQuota(relayInfo *relaycommon.RelayInfo, quota int) error {
 }
 
 func PostConsumeQuota(relayInfo *relaycommon.RelayInfo, quota int, preConsumedQuota int, sendEmail bool) (err error) {
+	if relayInfo != nil && relayInfo.UseCodexQuotaAllocation {
+		return nil
+	}
 
 	// 1) Consume from wallet quota OR subscription item
 	if relayInfo != nil && relayInfo.BillingSource == BillingSourceSubscription {

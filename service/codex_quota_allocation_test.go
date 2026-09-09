@@ -13,6 +13,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
+	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -42,6 +43,24 @@ func TestIsCodexQuotaChannelRecognizesCPAOpenAIChannel(t *testing.T) {
 	common.SetContextKey(context, constant.ContextKeyChannelType, constant.ChannelTypeCodex)
 	common.SetContextKey(context, constant.ContextKeyChannelBaseUrl, "")
 	assert.True(t, IsCodexQuotaChannel(context))
+}
+
+func TestCodexQuotaAllocationBypassesNumericBilling(t *testing.T) {
+	context, _ := gin.CreateTestContext(httptest.NewRecorder())
+	info := &relaycommon.RelayInfo{
+		UserId:                  7,
+		UseCodexQuotaAllocation: true,
+		FinalPreConsumedQuota:   100,
+	}
+
+	assert.Nil(t, PreConsumeBilling(context, 100, info))
+	assert.Nil(t, PreConsumeQuota(context, 100, info))
+	assert.NoError(t, PreConsumeTokenQuota(info, 100))
+	assert.Nil(t, info.Billing)
+	assert.Zero(t, info.FinalPreConsumedQuota)
+	assert.Zero(t, numericQuotaCharge(info, 200))
+	assert.NoError(t, SettleBilling(context, info, 200))
+	assert.NoError(t, PostConsumeQuota(info, 200, 0, false))
 }
 
 func TestProportionalCodexSharesPreservesTotal(t *testing.T) {

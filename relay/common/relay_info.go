@@ -129,6 +129,9 @@ type RelayInfo struct {
 	// Billing 是计费会话，封装了预扣费/结算/退款的统一生命周期。
 	// 免费模型时为 nil。
 	Billing BillingSettler
+	// UseCodexQuotaAllocation indicates that this request is admitted by the
+	// percentage-based Codex quota pool instead of the numeric user quota.
+	UseCodexQuotaAllocation bool
 	// BillingSource indicates whether this request is billed from wallet quota or subscription.
 	// "" or "wallet" => wallet; "subscription" => subscription
 	BillingSource string

@@ -157,16 +157,9 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	}
 
 	// common.SetContextKey(c, constant.ContextKeyTokenCountMeta, meta)
-
-	if priceData.FreeModel {
-		logger.LogInfo(c, fmt.Sprintf("模型 %s 免费，跳过预扣费", relayInfo.OriginModelName))
-	} else {
-		newAPIError = service.PreConsumeBilling(c, priceData.QuotaToPreConsume, relayInfo)
-		if newAPIError != nil {
-			return
-		}
-	}
-
+	// The distributor's channel is only the initial candidate. Billing is
+	// prepared after the retry loop selects the channel actually used, so a
+	// Codex request is not rejected by an unrelated numeric wallet balance.
 	defer func() {
 		// Only return quota if downstream failed and quota was actually pre-consumed
 		if newAPIError != nil {
@@ -195,10 +188,32 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			newAPIError = channelErr
 			break
 		}
-		if service.IsCodexQuotaChannel(c) {
+
+		useCodexQuotaAllocation := service.ShouldUseCodexQuotaAllocation(c)
+		if useCodexQuotaAllocation {
 			if quotaErr := service.CheckCodexQuotaAccess(c, relayInfo.UserId); quotaErr != nil {
 				newAPIError = quotaErr
 				break
+			}
+		}
+		if useCodexQuotaAllocation {
+			if relayInfo.Billing != nil {
+				// A previous non-Codex attempt may have reserved numeric quota.
+				// Refund that reservation before switching this request to the
+				// percentage-based Codex pool.
+				service.RefundAndClearBillingSession(c, relayInfo)
+			}
+			relayInfo.UseCodexQuotaAllocation = true
+			logger.LogInfo(c, "Codex 百分比额度分配已启用，跳过用户数字额度预扣费")
+		} else {
+			relayInfo.UseCodexQuotaAllocation = false
+			if !priceData.FreeModel && relayInfo.Billing == nil {
+				newAPIError = service.PreConsumeBilling(c, priceData.QuotaToPreConsume, relayInfo)
+				if newAPIError != nil {
+					break
+				}
+			} else if priceData.FreeModel {
+				logger.LogInfo(c, fmt.Sprintf("模型 %s 免费，跳过预扣费", relayInfo.OriginModelName))
 			}
 		}
 

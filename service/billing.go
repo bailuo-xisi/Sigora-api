@@ -14,15 +14,56 @@ const (
 	BillingSourceSubscription = "subscription"
 )
 
+// numericQuotaCharge returns the amount that should be charged to the user's
+// numeric wallet/statistics. Codex percentage allocation is accounted for in
+// the Codex quota pool instead, so it must not appear as a numeric charge.
+func numericQuotaCharge(relayInfo *relaycommon.RelayInfo, quota int) int {
+	if relayInfo != nil && relayInfo.UseCodexQuotaAllocation {
+		return 0
+	}
+	return quota
+}
+
 // PreConsumeBilling 根据用户计费偏好创建 BillingSession 并执行预扣费。
 // 会话存储在 relayInfo.Billing 上，供后续 Settle / Refund 使用。
 func PreConsumeBilling(c *gin.Context, preConsumedQuota int, relayInfo *relaycommon.RelayInfo) *types.NewAPIError {
+	if relayInfo != nil && relayInfo.UseCodexQuotaAllocation {
+		relayInfo.FinalPreConsumedQuota = 0
+		return nil
+	}
 	session, apiErr := NewBillingSession(c, relayInfo, preConsumedQuota)
 	if apiErr != nil {
 		return apiErr
 	}
 	relayInfo.Billing = session
 	return nil
+}
+
+// RefundAndClearBillingSession releases a numeric reservation before a retry
+// switches to percentage-based Codex allocation.
+func RefundAndClearBillingSession(c *gin.Context, relayInfo *relaycommon.RelayInfo) {
+	if relayInfo == nil {
+		return
+	}
+	if relayInfo.Billing != nil {
+		if session, ok := relayInfo.Billing.(*BillingSession); ok {
+			if err := session.RefundSync(c); err != nil {
+				logger.LogError(c, "同步返还数字额度失败: "+err.Error())
+			}
+		} else {
+			relayInfo.Billing.Refund(c)
+		}
+	}
+	relayInfo.Billing = nil
+	relayInfo.FinalPreConsumedQuota = 0
+	relayInfo.BillingSource = ""
+	relayInfo.SubscriptionId = 0
+	relayInfo.SubscriptionPreConsumed = 0
+	relayInfo.SubscriptionPostDelta = 0
+	relayInfo.SubscriptionPlanId = 0
+	relayInfo.SubscriptionPlanTitle = ""
+	relayInfo.SubscriptionAmountTotal = 0
+	relayInfo.SubscriptionAmountUsedAfterPreConsume = 0
 }
 
 // ---------------------------------------------------------------------------
@@ -32,6 +73,9 @@ func PreConsumeBilling(c *gin.Context, preConsumedQuota int, relayInfo *relaycom
 // SettleBilling 执行计费结算。如果 RelayInfo 上有 BillingSession 则通过 session 结算，
 // 否则回退到旧的 PostConsumeQuota 路径（兼容按次计费等场景）。
 func SettleBilling(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, actualQuota int) error {
+	if relayInfo != nil && relayInfo.UseCodexQuotaAllocation {
+		return nil
+	}
 	if relayInfo.Billing != nil {
 		preConsumed := relayInfo.Billing.GetPreConsumedQuota()
 		delta := actualQuota - preConsumed
