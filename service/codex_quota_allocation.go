@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -869,14 +870,7 @@ func loadCodexPoolState() (CodexQuotaPoolSummary, []model.CodexQuotaCycle, model
 		return CodexQuotaPoolSummary{}, nil, state, err
 	}
 	now := time.Now().Unix()
-	var cycles []model.CodexQuotaCycle
-	err = model.DB.Where(
-		"account_hash <> ? AND last_bucket_minute > ? AND reset_at > ? AND last_seen_at >= ?",
-		"",
-		0,
-		now,
-		now-int64(codexQuotaStaleAfter.Seconds()),
-	).Find(&cycles).Error
+	cycles, err := loadActiveCodexQuotaCyclesForPool(now)
 	if err != nil {
 		return CodexQuotaPoolSummary{}, nil, state, err
 	}
@@ -891,6 +885,18 @@ func loadCodexPoolState() (CodexQuotaPoolSummary, []model.CodexQuotaCycle, model
 		pool.PoolRemainUnits = 0
 	}
 	return pool, cycles, state, nil
+}
+
+func loadActiveCodexQuotaCyclesForPool(now int64) ([]model.CodexQuotaCycle, error) {
+	var cycles []model.CodexQuotaCycle
+	err := model.DB.Where(
+		"account_hash <> ? AND last_bucket_minute > ? AND reset_at > ? AND last_seen_at >= ?",
+		"",
+		0,
+		now,
+		now-int64(codexQuotaStaleAfter.Seconds()),
+	).Find(&cycles).Error
+	return cycles, err
 }
 
 func codexQuotaWindowType(cycles []model.CodexQuotaCycle) string {
@@ -919,15 +925,24 @@ func CheckCodexQuotaAccess(c *gin.Context, userId int) *types.NewAPIError {
 	if policyErr != nil {
 		return types.NewErrorWithStatusCode(policyErr, types.ErrorCodeCodexQuotaUnavailable, http.StatusForbidden, types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
 	}
+	channelType := common.GetContextKeyInt(c, constant.ContextKeyChannelType)
+	sharedPool := channelType != constant.ChannelTypeCodex && IsCodexQuotaChannel(c)
 	accountHash := resolveCodexQuotaAccountHash(common.GetContextKeyString(c, constant.ContextKeyChannelKey))
-	if accountHash == "" {
+	if accountHash == "" && !sharedPool {
 		if role >= common.RoleAdminUser {
 			return nil
 		}
 		return types.NewErrorWithStatusCode(errors.New("Codex channel is missing a quota account binding"), types.ErrorCodeCodexQuotaUnavailable, http.StatusForbidden, types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
 	}
 	now := time.Now().Unix()
-	cycles, err := loadCodexQuotaCyclesForAccount(accountHash, now, role < common.RoleAdminUser)
+	var cycles []model.CodexQuotaCycle
+	var err error
+	if sharedPool {
+		cycles, err = loadActiveCodexQuotaCyclesForPool(now)
+		accountHash = codexQuotaSharedPoolHash()
+	} else {
+		cycles, err = loadCodexQuotaCyclesForAccount(accountHash, now, role < common.RoleAdminUser)
+	}
 	if err != nil {
 		return types.NewErrorWithStatusCode(err, types.ErrorCodeCodexQuotaUnavailable, http.StatusForbidden, types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
 	}
@@ -952,6 +967,43 @@ func CheckCodexQuotaAccess(c *gin.Context, userId int) *types.NewAPIError {
 	}
 	bindCodexQuotaCycles(c, accountHash, cycles)
 	return nil
+}
+
+// IsCodexQuotaChannel identifies both native Codex channels and OpenAI-compatible
+// channels pointed at the configured CPA management service. CPA commonly exposes
+// Codex through the generic OpenAI channel type, so ChannelType alone is not enough.
+func IsCodexQuotaChannel(c *gin.Context) bool {
+	if common.GetContextKeyInt(c, constant.ContextKeyChannelType) == constant.ChannelTypeCodex {
+		return true
+	}
+	return isCodexQuotaManagedProxyURL(common.GetContextKeyString(c, constant.ContextKeyChannelBaseUrl))
+}
+
+func isCodexQuotaManagedProxyURL(rawBaseURL string) bool {
+	cfg := getManagementCodexQuotaConfig()
+	if cfg.key == "" {
+		return false
+	}
+	channelOrigin := codexQuotaURLOrigin(rawBaseURL)
+	managementOrigin := codexQuotaURLOrigin(cfg.baseURL)
+	return channelOrigin != "" && channelOrigin == managementOrigin
+}
+
+func codexQuotaSharedPoolHash() string {
+	cfg := getManagementCodexQuotaConfig()
+	origin := codexQuotaURLOrigin(cfg.baseURL)
+	if origin == "" {
+		origin = "shared"
+	}
+	return common.Sha256([]byte("codex-quota-pool:" + origin))
+}
+
+func codexQuotaURLOrigin(rawURL string) string {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return ""
+	}
+	return strings.ToLower(parsed.Scheme) + "://" + strings.ToLower(parsed.Host)
 }
 
 func loadActiveCodexQuotaCyclesForAccount(accountHash string, now int64) ([]model.CodexQuotaCycle, error) {

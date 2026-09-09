@@ -370,7 +370,7 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		model.UpdateChannelUsedQuota(relayInfo.ChannelId, summary.Quota)
 	}
 
-	if relayInfo.ChannelType == constant.ChannelTypeCodex {
+	if IsCodexQuotaChannel(ctx) {
 		if err := FinalizeCodexQuotaUsageTracking(
 			ctx,
 			relayInfo.UserId,

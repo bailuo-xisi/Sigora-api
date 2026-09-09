@@ -27,6 +27,23 @@ func TestPercentToCodexUnits(t *testing.T) {
 	assert.Equal(t, int64(1_000_000), percentToCodexUnits(120))
 }
 
+func TestIsCodexQuotaChannelRecognizesCPAOpenAIChannel(t *testing.T) {
+	t.Setenv("SIGORA_QUOTA_MANAGEMENT_BASE_URL", "https://cpa.example/v0/management")
+	t.Setenv("SIGORA_QUOTA_MANAGEMENT_KEY", "management-key")
+
+	context, _ := gin.CreateTestContext(httptest.NewRecorder())
+	common.SetContextKey(context, constant.ContextKeyChannelType, constant.ChannelTypeOpenAI)
+	common.SetContextKey(context, constant.ContextKeyChannelBaseUrl, "https://cpa.example/v1")
+	assert.True(t, IsCodexQuotaChannel(context))
+
+	common.SetContextKey(context, constant.ContextKeyChannelBaseUrl, "https://openai.example/v1")
+	assert.False(t, IsCodexQuotaChannel(context))
+
+	common.SetContextKey(context, constant.ContextKeyChannelType, constant.ChannelTypeCodex)
+	common.SetContextKey(context, constant.ContextKeyChannelBaseUrl, "")
+	assert.True(t, IsCodexQuotaChannel(context))
+}
+
 func TestProportionalCodexSharesPreservesTotal(t *testing.T) {
 	weights := []codexWeight{
 		{UserId: 3, Weight: 1, Role: common.RoleCommonUser},

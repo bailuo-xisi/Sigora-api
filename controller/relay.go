@@ -195,7 +195,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			newAPIError = channelErr
 			break
 		}
-		if channel.Type == constant.ChannelTypeCodex {
+		if service.IsCodexQuotaChannel(c) {
 			if quotaErr := service.CheckCodexQuotaAccess(c, relayInfo.UserId); quotaErr != nil {
 				newAPIError = quotaErr
 				break
@@ -214,7 +214,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			break
 		}
 		c.Request.Body = io.NopCloser(bodyStorage)
-		if channel.Type == constant.ChannelTypeCodex {
+		if service.IsCodexQuotaChannel(c) {
 			if trackingErr := service.StartCodexQuotaUsageTracking(
 				c,
 				relayInfo.UserId,
@@ -248,7 +248,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			relayInfo.LastError = nil
 			return
 		}
-		if channel.Type == constant.ChannelTypeCodex {
+		if service.IsCodexQuotaChannel(c) {
 			if err := service.CancelCodexQuotaUsageTracking(c, relayInfo.UserId); err != nil {
 				common.SysLog("failed to cancel Codex quota usage tracking: " + err.Error())
 			}
