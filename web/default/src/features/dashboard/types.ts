@@ -78,6 +78,8 @@ export interface CodexQuotaAllocationResult {
   remaining_units: number
   pending_weight: number
   pending_since: number
+  awaiting_sync_weight: number
+  awaiting_sync_since: number
   unattributed_weight: number
   unattributed_since: number
   included_count: number

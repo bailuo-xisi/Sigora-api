@@ -208,6 +208,11 @@ func TestSyncCodexQuotaAllocationUsesOutboundWeightBeforeResponseCompletes(t *te
 	require.NoError(t, db.First(&cycle).Error)
 	assert.Equal(t, int64(100_000), cycle.UpstreamUsedUnits, "in-flight traffic must not settle before it succeeds")
 	require.NoError(t, FinalizeCodexQuotaUsageTracking(requestContext, user.Id, 0, 0, 100, 100))
+	pending, err = getCodexPendingUsage(user.Id, []model.CodexQuotaCycle{cycle}, 0)
+	require.NoError(t, err)
+	assert.Zero(t, pending.PendingWeight, "a completed request is not still in flight")
+	assert.Equal(t, int64(100), pending.AwaitingSyncWeight, "completed traffic waits only for CPA synchronization")
+	assert.Equal(t, currentMinute, pending.AwaitingSyncSince)
 
 	nowValue = nowValue.Add(time.Minute)
 	require.NoError(t, SyncCodexQuotaAllocation(context.Background()))

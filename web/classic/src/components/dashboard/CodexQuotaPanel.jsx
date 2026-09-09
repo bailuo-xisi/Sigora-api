@@ -251,7 +251,8 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
     }
     const timer = window.setInterval(
       loadCodexQuotas,
-      allocationData.pending_weight > 0
+      allocationData.pending_weight > 0 ||
+        allocationData.awaiting_sync_weight > 0
         ? CODEX_PENDING_REFRESH_INTERVAL
         : CODEX_ALLOCATION_REFRESH_INTERVAL,
     );
@@ -259,11 +260,15 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
   }, [
     allocationData?.enabled,
     allocationData?.pending_weight,
+    allocationData?.awaiting_sync_weight,
     loadCodexQuotas,
   ]);
 
   const items = quotaData?.items || [];
   const estimatedUsedUnits = getEstimatedUsedUnits(allocationData);
+  const pendingSettlementWeight =
+    Number(allocationData?.pending_weight || 0) +
+    Number(allocationData?.awaiting_sync_weight || 0);
 
   return (
     <Card
@@ -360,10 +365,9 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
           </div>
         )}
 
-        {allocationData?.pending_weight > 0 && (
+        {pendingSettlementWeight > 0 && (
           <div className='mb-3 text-center text-xs tabular-nums text-gray-500'>
-            {t('待结算估算权重')}:{' '}
-            {Number(allocationData.pending_weight).toLocaleString()}
+            {t('待结算估算权重')}: {pendingSettlementWeight.toLocaleString()}
           </div>
         )}
 

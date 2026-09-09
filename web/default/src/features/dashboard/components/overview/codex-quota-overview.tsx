@@ -220,7 +220,10 @@ export function CodexQuotaOverview() {
     ? allocationQuery.data.data
     : undefined
   const estimatedUsedUnits = allocation ? getEstimatedUsedUnits(allocation) : 0
-  const hasPendingSettlement = (allocation?.pending_weight ?? 0) > 0
+  const pendingSettlementWeight = allocation
+    ? allocation.pending_weight + (allocation.awaiting_sync_weight ?? 0)
+    : 0
+  const hasPendingSettlement = pendingSettlementWeight > 0
   const query = useQuery({
     queryKey: CODEX_QUOTAS_QUERY_KEY,
     queryFn: () => getCodexQuotas(),
@@ -377,10 +380,10 @@ export function CodexQuotaOverview() {
               {allocation.unattributed_weight.toLocaleString()}
             </div>
           ) : null}
-          {allocation.pending_weight > 0 ? (
+          {pendingSettlementWeight > 0 ? (
             <div className='text-muted-foreground text-center text-xs tabular-nums'>
               {t('Estimated pending settlement weight')}:{' '}
-              {allocation.pending_weight.toLocaleString()}
+              {pendingSettlementWeight.toLocaleString()}
             </div>
           ) : null}
         </>

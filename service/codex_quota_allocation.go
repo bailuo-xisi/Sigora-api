@@ -43,8 +43,10 @@ type CodexQuotaAllocationSummary struct {
 	SettledUsedUnits   int64  `json:"settled_used_units"`
 	EstimatedUsedUnits int64  `json:"estimated_used_units"`
 	RemainingUnits     int64  `json:"remaining_units"`
-	PendingWeight      int64  `json:"pending_weight"`
+	PendingWeight      int64  `json:"pending_weight"`      // Requests that have not completed locally.
 	PendingSince       int64  `json:"pending_since"`
+	AwaitingSyncWeight int64  `json:"awaiting_sync_weight"` // Completed requests not covered by a CPA delta yet.
+	AwaitingSyncSince  int64  `json:"awaiting_sync_since"`
 	UnattributedWeight int64  `json:"unattributed_weight"`
 	UnattributedSince  int64  `json:"unattributed_since"`
 	IncludedCount      int    `json:"included_count"`
@@ -735,6 +737,8 @@ func GetCodexQuotaAllocationSummary(userId int) (*CodexQuotaAllocationSummary, e
 		RemainingUnits:     remaining,
 		PendingWeight:      pending.PendingWeight,
 		PendingSince:       pending.PendingSince,
+		AwaitingSyncWeight: pending.AwaitingSyncWeight,
+		AwaitingSyncSince:  pending.AwaitingSyncSince,
 		UnattributedWeight: pending.UnattributedWeight,
 		UnattributedSince:  pending.UnattributedSince,
 		IncludedCount:      len(cycles),
@@ -747,6 +751,8 @@ func GetCodexQuotaAllocationSummary(userId int) (*CodexQuotaAllocationSummary, e
 type codexPendingUsage struct {
 	PendingWeight      int64
 	PendingSince       int64
+	AwaitingSyncWeight int64
+	AwaitingSyncSince  int64
 	UnattributedWeight int64
 	UnattributedSince  int64
 }
@@ -784,6 +790,7 @@ func getCodexPendingUsage(userId int, cycles []model.CodexQuotaCycle, legacyWate
 		BucketMinute int64
 	}
 	pendingByBucket := make(map[bucketKey]int64)
+	awaitingSyncByBucket := make(map[bucketKey]int64)
 	unattributedByBucket := make(map[bucketKey]int64)
 	for _, bucket := range buckets {
 		bucketWeight := bucket.Weight + bucket.PendingWeight
@@ -796,8 +803,13 @@ func getCodexPendingUsage(userId int, cycles []model.CodexQuotaCycle, legacyWate
 		key := bucketKey{AccountHash: bucket.AccountHash, BucketMinute: bucket.BucketMinute}
 		if _, active := activeCycleIds[bucket.CycleId]; active {
 			watermark := cycleWatermarks[bucket.CycleId]
-			if bucket.BucketMinute > watermark && bucketWeight > pendingByBucket[key] {
-				pendingByBucket[key] = bucketWeight
+			if bucket.BucketMinute > watermark {
+				if bucket.PendingWeight > pendingByBucket[key] {
+					pendingByBucket[key] = bucket.PendingWeight
+				}
+				if bucket.Weight > awaitingSyncByBucket[key] {
+					awaitingSyncByBucket[key] = bucket.Weight
+				}
 			}
 			if bucket.BucketMinute <= watermark && bucket.PendingWeight > 0 && bucketWeight > unattributedByBucket[key] {
 				unattributedByBucket[key] = bucketWeight
@@ -817,6 +829,12 @@ func getCodexPendingUsage(userId int, cycles []model.CodexQuotaCycle, legacyWate
 		pending.PendingWeight += weight
 		if pending.PendingSince == 0 || key.BucketMinute < pending.PendingSince {
 			pending.PendingSince = key.BucketMinute
+		}
+	}
+	for key, weight := range awaitingSyncByBucket {
+		pending.AwaitingSyncWeight += weight
+		if pending.AwaitingSyncSince == 0 || key.BucketMinute < pending.AwaitingSyncSince {
+			pending.AwaitingSyncSince = key.BucketMinute
 		}
 	}
 	for key, weight := range unattributedByBucket {
