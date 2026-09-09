@@ -74,6 +74,7 @@ export interface CodexQuotaAllocationResult {
   allocated_units: number
   used_units: number
   settled_used_units: number
+  estimated_used_units?: number
   remaining_units: number
   pending_weight: number
   pending_since: number

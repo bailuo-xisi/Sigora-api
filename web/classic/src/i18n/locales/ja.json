@@ -2,6 +2,7 @@
   "translation": {
     "Allocation preview": "割り当てプレビュー",
     "Allocated units": "割り当て済み単位",
+    "Estimated usage": "推定使用量",
     "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.": "上流の完全なクォータ枠1つを1,000,000推定単位として扱います。これはトークン数ではありません。",
     "Estimated long-term quota pool": "推定長期クォータプール",
     "Estimated monthly quota pool": "推定月間クォータプール",
@@ -3200,6 +3201,8 @@
     "请选择过期时间": "有効期限を選択してください",
     "请选择通知方式": "通知方法を選択してください",
     "调整额度": "残高調整",
+    "批量调整额度": "クォータを一括調整",
+    "对选中的 {{count}} 个用户应用相同的额度调整。": "選択した{{count}}人のユーザーに同じクォータ調整を適用します。",
     "调整额度成功": "残高の調整に成功しました",
     "调用次数": "呼び出し回数",
     "调用次数分布": "呼び出し回数分布",

@@ -38,6 +38,7 @@ import type {
 } from '@/features/dashboard/types'
 
 const CODEX_PENDING_REFETCH_INTERVAL = 30 * 1000
+const CODEX_ALLOCATION_REFETCH_INTERVAL = 60 * 1000
 const CODEX_QUOTAS_QUERY_KEY = ['dashboard', 'overview', 'codex-quotas']
 
 function getQuotaWindowLabel(t: TFunction, window: CodexQuotaWindow) {
@@ -64,6 +65,17 @@ function formatAllocatedUsagePercent(
 
 function formatCodexQuotaUnits(value: number) {
   return Math.max(0, Math.round(value)).toLocaleString()
+}
+
+function getEstimatedUsedUnits(allocation: CodexQuotaAllocationResult) {
+  if (allocation.estimated_used_units !== undefined) {
+    return allocation.estimated_used_units
+  }
+  return (
+    (allocation.settled_used_units ?? allocation.used_units) +
+    allocation.pending_weight +
+    allocation.unattributed_weight
+  )
 }
 
 function getEstimatedPoolLabel(
@@ -204,14 +216,14 @@ export function CodexQuotaOverview() {
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
     refetchInterval: (query) =>
-      query.state.data?.success &&
-      (query.state.data.data?.pending_weight ?? 0) > 0
-        ? CODEX_PENDING_REFETCH_INTERVAL
+      query.state.data?.success && query.state.data.data?.enabled
+        ? CODEX_ALLOCATION_REFETCH_INTERVAL
         : false,
   })
   const allocation = allocationQuery.data?.success
     ? allocationQuery.data.data
     : undefined
+  const estimatedUsedUnits = allocation ? getEstimatedUsedUnits(allocation) : 0
   const hasPendingSettlement = (allocation?.pending_weight ?? 0) > 0
   const query = useQuery({
     queryKey: CODEX_QUOTAS_QUERY_KEY,
@@ -219,9 +231,11 @@ export function CodexQuotaOverview() {
     retry: false,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchInterval: hasPendingSettlement
-      ? CODEX_PENDING_REFETCH_INTERVAL
-      : false,
+    refetchInterval: allocation?.enabled
+      ? CODEX_ALLOCATION_REFETCH_INTERVAL
+      : hasPendingSettlement
+        ? CODEX_PENDING_REFETCH_INTERVAL
+        : false,
   })
   const poolQuery = useQuery({
     queryKey: ['dashboard', 'overview', 'codex-quota-pool'],
@@ -230,9 +244,11 @@ export function CodexQuotaOverview() {
     retry: false,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchInterval: hasPendingSettlement
-      ? CODEX_PENDING_REFETCH_INTERVAL
-      : false,
+    refetchInterval: allocation?.enabled
+      ? CODEX_ALLOCATION_REFETCH_INTERVAL
+      : hasPendingSettlement
+        ? CODEX_PENDING_REFETCH_INTERVAL
+        : false,
   })
   const pool = poolQuery.data?.success ? poolQuery.data.data : undefined
   const isRefreshing =
@@ -305,10 +321,12 @@ export function CodexQuotaOverview() {
               </div>
             </div>
             <div>
-              <div className='text-muted-foreground'>{t('Settled usage')}</div>
+              <div className='text-muted-foreground'>
+                {t('Estimated usage')}
+              </div>
               <div className='font-semibold tabular-nums'>
                 {formatAllocatedUsagePercent(
-                  allocation.settled_used_units ?? allocation.used_units,
+                  estimatedUsedUnits,
                   allocation.allocated_units
                 )}
               </div>
@@ -340,9 +358,7 @@ export function CodexQuotaOverview() {
             <div>
               <div className='text-muted-foreground'>{t('Used units')}</div>
               <div className='font-semibold tabular-nums'>
-                {formatCodexQuotaUnits(
-                  allocation.settled_used_units ?? allocation.used_units
-                )}
+                {formatCodexQuotaUnits(estimatedUsedUnits)}
               </div>
             </div>
             <div>

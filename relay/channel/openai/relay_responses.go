@@ -53,6 +53,23 @@ func OaiResponsesHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 			usage.PromptTokensDetails.CachedTokens = responsesResponse.Usage.InputTokensDetails.CachedTokens
 		}
 	}
+	if usage.TotalTokens == 0 && info != nil {
+		// Some Responses-compatible upstreams omit total_tokens or the entire
+		// usage object. Preserve any partial usage and estimate the missing side.
+		fallback := service.ResponseText2Usage(
+			c,
+			service.ExtractOutputTextFromResponses(&responsesResponse),
+			info.UpstreamModelName,
+			info.GetEstimatePromptTokens(),
+		)
+		if usage.PromptTokens == 0 {
+			usage.PromptTokens = fallback.PromptTokens
+		}
+		if usage.CompletionTokens == 0 {
+			usage.CompletionTokens = fallback.CompletionTokens
+		}
+		usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+	}
 	if info == nil || info.ResponsesUsageInfo == nil || info.ResponsesUsageInfo.BuiltInTools == nil {
 		return &usage, nil
 	}
@@ -140,7 +157,7 @@ func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 		}
 	}
 
-	if usage.PromptTokens == 0 && usage.CompletionTokens != 0 {
+	if usage.PromptTokens == 0 {
 		usage.PromptTokens = info.GetEstimatePromptTokens()
 	}
 

@@ -23,6 +23,7 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type LoginRequest struct {
@@ -922,6 +923,124 @@ type ManageRequest struct {
 	Action string `json:"action"`
 	Value  int    `json:"value"`
 	Mode   string `json:"mode"`
+}
+
+const maxBatchQuotaUsers = 100
+
+var (
+	errBatchQuotaUserNotFound   = errors.New("batch quota user not found")
+	errBatchQuotaUserPermission = errors.New("batch quota user permission denied")
+)
+
+type BatchAdjustUserQuotaRequest struct {
+	Ids   []int  `json:"ids"`
+	Mode  string `json:"mode"`
+	Value int    `json:"value"`
+}
+
+func normalizeUserIds(ids []int) ([]int, bool) {
+	seen := make(map[int]struct{}, len(ids))
+	normalized := make([]int, 0, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			return nil, false
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		normalized = append(normalized, id)
+	}
+	return normalized, len(normalized) > 0
+}
+
+func BatchAdjustUserQuota(c *gin.Context) {
+	var req BatchAdjustUserQuotaRequest
+	if err := common.DecodeJson(c.Request.Body, &req); err != nil || len(req.Ids) == 0 {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	if len(req.Ids) > maxBatchQuotaUsers {
+		common.ApiErrorI18n(c, i18n.MsgBatchTooMany, map[string]any{"Max": maxBatchQuotaUsers})
+		return
+	}
+
+	ids, valid := normalizeUserIds(req.Ids)
+	if !valid {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	if (req.Mode == "add" || req.Mode == "subtract") && req.Value <= 0 {
+		common.ApiErrorI18n(c, i18n.MsgUserQuotaChangeZero)
+		return
+	}
+	if req.Mode != "add" && req.Mode != "subtract" && req.Mode != "override" {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+
+	var users []model.User
+	myRole := c.GetInt("role")
+	err := model.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Select("id", "username", "role", "quota").Where("id IN ?", ids).Find(&users).Error; err != nil {
+			return err
+		}
+		if len(users) != len(ids) {
+			return errBatchQuotaUserNotFound
+		}
+		for _, user := range users {
+			if !canManageTargetRole(myRole, user.Role) {
+				return errBatchQuotaUserPermission
+			}
+		}
+
+		query := tx.Model(&model.User{}).Where("id IN ?", ids)
+		switch req.Mode {
+		case "add":
+			return query.Update("quota", gorm.Expr("quota + ?", req.Value)).Error
+		case "subtract":
+			return query.Update("quota", gorm.Expr("quota - ?", req.Value)).Error
+		case "override":
+			return query.Update("quota", req.Value).Error
+		default:
+			return errors.New("invalid quota adjustment mode")
+		}
+	})
+	if err != nil {
+		if errors.Is(err, errBatchQuotaUserNotFound) {
+			common.ApiErrorI18n(c, i18n.MsgUserNotExists)
+			return
+		}
+		if errors.Is(err, errBatchQuotaUserPermission) {
+			common.ApiErrorI18n(c, i18n.MsgUserNoPermissionHigherLevel)
+			return
+		}
+		common.ApiError(c, err)
+		return
+	}
+
+	for _, user := range users {
+		if err := model.InvalidateUserCache(user.Id); err != nil {
+			common.SysLog(fmt.Sprintf("failed to invalidate user cache for user %d: %s", user.Id, err.Error()))
+		}
+		switch req.Mode {
+		case "add":
+			recordManageAuditFor(c, user.Id, "user.quota_add", map[string]interface{}{
+				"quota": logger.LogQuota(req.Value),
+			})
+		case "subtract":
+			recordManageAuditFor(c, user.Id, "user.quota_subtract", map[string]interface{}{
+				"quota": logger.LogQuota(req.Value),
+			})
+		case "override":
+			recordManageAuditFor(c, user.Id, "user.quota_override", map[string]interface{}{
+				"from": logger.LogQuota(user.Quota),
+				"to":   logger.LogQuota(req.Value),
+			})
+		}
+	}
+
+	common.ApiSuccess(c, gin.H{"count": len(users)})
 }
 
 // ManageUser Only admin user can do this

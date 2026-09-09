@@ -36,6 +36,19 @@ export const useUsersData = () => {
   const [groupOptions, setGroupOptions] = useState([]);
   const [userCount, setUserCount] = useState(0);
 
+  // Row selection
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const rowSelection = {
+    getCheckboxProps: (record) => ({
+      disabled: record.DeletedAt != null,
+      name: record.username,
+    }),
+    selectedRowKeys: selectedUsers.map((user) => user.id),
+    onChange: (selectedRowKeys, selectedRows) => {
+      setSelectedUsers(selectedRows);
+    },
+  };
+
   // Modal states
   const [showAddUser, setShowAddUser] = useState(false);
   const [showEditUser, setShowEditUser] = useState(false);
@@ -66,6 +79,7 @@ export const useUsersData = () => {
     for (let i = 0; i < users.length; i++) {
       users[i].key = users[i].id;
     }
+    setSelectedUsers([]);
     setUsers(users);
   };
 
@@ -283,6 +297,9 @@ export const useUsersData = () => {
     userCount,
     searching,
     groupOptions,
+    selectedUsers,
+    setSelectedUsers,
+    rowSelection,
 
     // Modal state
     showAddUser,

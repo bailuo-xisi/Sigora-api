@@ -17,21 +17,53 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@douyinfe/semi-ui';
+import BatchUserQuotaModal from './modals/BatchUserQuotaModal';
 
-const UsersActions = ({ setShowAddUser, t }) => {
+const UsersActions = ({
+  setShowAddUser,
+  selectedUsers,
+  onBatchQuotaSuccess,
+  t,
+}) => {
+  const [batchQuotaVisible, setBatchQuotaVisible] = useState(false);
+
   // Add new user
   const handleAddUser = () => {
     setShowAddUser(true);
   };
 
   return (
-    <div className='flex gap-2 w-full md:w-auto order-2 md:order-1'>
-      <Button className='w-full md:w-auto' onClick={handleAddUser} size='small'>
-        {t('添加用户')}
-      </Button>
-    </div>
+    <>
+      <div className='flex gap-2 w-full md:w-auto order-2 md:order-1'>
+        <Button
+          className='flex-1 md:flex-initial'
+          onClick={handleAddUser}
+          size='small'
+        >
+          {t('添加用户')}
+        </Button>
+        <Button
+          className='flex-1 md:flex-initial'
+          type='primary'
+          theme='outline'
+          onClick={() => setBatchQuotaVisible(true)}
+          disabled={selectedUsers.length === 0}
+          size='small'
+        >
+          {t('批量调整额度')}
+          {selectedUsers.length > 0 ? ` (${selectedUsers.length})` : ''}
+        </Button>
+      </div>
+
+      <BatchUserQuotaModal
+        visible={batchQuotaVisible}
+        onCancel={() => setBatchQuotaVisible(false)}
+        users={selectedUsers}
+        onSuccess={onBatchQuotaSuccess}
+      />
+    </>
   );
 };
 

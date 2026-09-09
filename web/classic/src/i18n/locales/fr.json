@@ -2,6 +2,7 @@
   "translation": {
     "Allocation preview": "Aperçu de l’attribution",
     "Allocated units": "Unités attribuées",
+    "Estimated usage": "Utilisation estimée",
     "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.": "Chaque fenêtre complète de quota en amont équivaut à 1 000 000 d’unités estimées ; il ne s’agit pas d’un nombre de jetons.",
     "Estimated long-term quota pool": "Pool de quota à long terme estimé",
     "Estimated monthly quota pool": "Pool de quota mensuel estimé",
@@ -3231,6 +3232,8 @@
     "请选择过期时间": "Veuillez sélectionner une date d'expiration",
     "请选择通知方式": "Veuillez sélectionner la méthode de notification",
     "调整额度": "Ajuster le quota",
+    "批量调整额度": "Ajuster les quotas par lot",
+    "对选中的 {{count}} 个用户应用相同的额度调整。": "Appliquer le même ajustement de quota aux {{count}} utilisateurs sélectionnés.",
     "调整额度成功": "Quota ajusté avec succès",
     "调用次数": "Nombre d'appels",
     "调用次数分布": "Distribution des appels de modèles",

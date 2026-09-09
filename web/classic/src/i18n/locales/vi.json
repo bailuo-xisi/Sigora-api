@@ -2,6 +2,7 @@
   "translation": {
     "Allocation preview": "Xem trước phân bổ",
     "Allocated units": "Đơn vị đã phân bổ",
+    "Estimated usage": "Mức sử dụng ước tính",
     "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.": "Mỗi cửa sổ hạn mức thượng nguồn đầy đủ được tính là 1.000.000 đơn vị ước tính; đây không phải số token.",
     "Estimated long-term quota pool": "Tổng hạn mức dài hạn ước tính",
     "Estimated monthly quota pool": "Tổng hạn mức tháng ước tính",
@@ -3650,6 +3651,8 @@
     "读取": "Đọc",
     "读取失败": "Đọc thất bại",
     "调整额度": "Điều chỉnh hạn ngạch",
+    "批量调整额度": "Điều chỉnh hạn mức hàng loạt",
+    "对选中的 {{count}} 个用户应用相同的额度调整。": "Áp dụng cùng một mức điều chỉnh hạn mức cho {{count}} người dùng đã chọn.",
     "调整额度成功": "Điều chỉnh hạn ngạch thành công",
     "调用次数": "Số lần gọi",
     "调用次数分布": "Phân phối số lần gọi",

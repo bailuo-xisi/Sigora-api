@@ -2,6 +2,7 @@
   "translation": {
     "Allocation preview": "分配預覽",
     "Allocated units": "已分配額度單位",
+    "Estimated usage": "預計使用",
     "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.": "每個完整的上游額度週期按 1,000,000 個估算單位計算，這不是 Token 數量。",
     "Estimated long-term quota pool": "預估長期額度池",
     "Estimated monthly quota pool": "預估月額度池",
@@ -3212,6 +3213,8 @@
     "请选择过期时间": "請選擇過期時間",
     "请选择通知方式": "請選擇通知方式",
     "调整额度": "調整額度",
+    "批量调整额度": "批次調整額度",
+    "对选中的 {{count}} 个用户应用相同的额度调整。": "對選取的 {{count}} 個使用者套用相同的額度調整。",
     "调整额度成功": "調整額度成功",
     "调用次数": "調用次數",
     "调用次数分布": "調用次數分佈",

@@ -24,6 +24,7 @@ import { API, isAdmin } from '../../helpers';
 import ScrollableContainer from '../common/ui/ScrollableContainer';
 
 const CODEX_PENDING_REFRESH_INTERVAL = 30 * 1000;
+const CODEX_ALLOCATION_REFRESH_INTERVAL = 60 * 1000;
 
 const clampPercent = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
@@ -47,6 +48,18 @@ const formatAllocatedUsagePercent = (usedUnits, allocatedUnits) => {
 
 const formatCodexQuotaUnits = (value) =>
   Math.max(0, Math.round(Number(value) || 0)).toLocaleString();
+
+const getEstimatedUsedUnits = (allocation) => {
+  if (allocation?.estimated_used_units !== undefined) {
+    return Number(allocation.estimated_used_units) || 0;
+  }
+  return (
+    (Number(allocation?.settled_used_units ?? allocation?.used_units ?? 0) ||
+      0) +
+    (Number(allocation?.pending_weight) || 0) +
+    (Number(allocation?.unattributed_weight) || 0)
+  );
+};
 
 const getEstimatedPoolLabel = (t, windowType) => {
   if (windowType === 'weekly') return t('Estimated weekly quota pool');
@@ -236,17 +249,24 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
   }, [loadCodexQuotas]);
 
   useEffect(() => {
-    if ((allocationData?.pending_weight ?? 0) <= 0) {
+    if (!allocationData?.enabled) {
       return undefined;
     }
     const timer = window.setInterval(
       loadCodexQuotas,
-      CODEX_PENDING_REFRESH_INTERVAL,
+      allocationData.pending_weight > 0
+        ? CODEX_PENDING_REFRESH_INTERVAL
+        : CODEX_ALLOCATION_REFRESH_INTERVAL,
     );
     return () => window.clearInterval(timer);
-  }, [allocationData?.pending_weight, loadCodexQuotas]);
+  }, [
+    allocationData?.enabled,
+    allocationData?.pending_weight,
+    loadCodexQuotas,
+  ]);
 
   const items = quotaData?.items || [];
+  const estimatedUsedUnits = getEstimatedUsedUnits(allocationData);
 
   return (
     <Card
@@ -283,11 +303,10 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
                 </div>
               </div>
               <div>
-                <div className='text-gray-500'>{t('已确认使用')}</div>
+                <div className='text-gray-500'>{t('Estimated usage')}</div>
                 <div className='font-semibold tabular-nums'>
                   {formatAllocatedUsagePercent(
-                    allocationData.settled_used_units ??
-                      allocationData.used_units,
+                    estimatedUsedUnits,
                     allocationData.allocated_units,
                   )}
                 </div>
@@ -317,10 +336,7 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
               <div>
                 <div className='text-gray-500'>{t('Used units')}</div>
                 <div className='font-semibold tabular-nums'>
-                  {formatCodexQuotaUnits(
-                    allocationData.settled_used_units ??
-                      allocationData.used_units,
-                  )}
+                  {formatCodexQuotaUnits(estimatedUsedUnits)}
                 </div>
               </div>
               <div>

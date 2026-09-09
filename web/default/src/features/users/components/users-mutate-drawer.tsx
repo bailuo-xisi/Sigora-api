@@ -170,16 +170,19 @@ export function UsersMutateDrawer({
         (codexAllocation.pool_capacity_units * previewEffectiveBps) / 10_000
       )
     : 0
-  const settledUsedUnits = codexAllocation
-    ? (codexAllocation.settled_used_units ?? codexAllocation.used_units)
+  const estimatedUsedUnits = codexAllocation
+    ? (codexAllocation.estimated_used_units ??
+      (codexAllocation.settled_used_units ?? codexAllocation.used_units) +
+        codexAllocation.pending_weight +
+        codexAllocation.unattributed_weight)
     : 0
   const previewRemainingUnits = Math.max(
     0,
-    previewAllocatedUnits - settledUsedUnits
+    previewAllocatedUnits - estimatedUsedUnits
   )
   const previewUsagePercent =
     previewAllocatedUnits > 0
-      ? Math.min(100, (settledUsedUnits / previewAllocatedUnits) * 100)
+      ? Math.min(100, (estimatedUsedUnits / previewAllocatedUnits) * 100)
       : 0
 
   const onSubmit = async (data: UserFormValues) => {
@@ -560,7 +563,7 @@ export function UsersMutateDrawer({
                                 {t('Used units')}
                               </div>
                               <div className='font-semibold tabular-nums'>
-                                {formatCodexQuotaUnits(settledUsedUnits)}
+                                {formatCodexQuotaUnits(estimatedUsedUnits)}
                               </div>
                             </div>
                             <div>

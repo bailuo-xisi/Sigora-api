@@ -41,6 +41,7 @@ const UsersTable = (usersData) => {
     pageSize,
     userCount,
     compactMode,
+    rowSelection,
     handlePageChange,
     handlePageSizeChange,
     handleRow,
@@ -185,6 +186,7 @@ const UsersTable = (usersData) => {
         }}
         hidePagination={true}
         loading={loading}
+        rowSelection={rowSelection}
         onRow={handleRow}
         empty={
           <Empty

@@ -175,6 +175,10 @@ func TestSyncCodexQuotaAllocationUsesOutboundWeightBeforeResponseCompletes(t *te
 	require.NoError(t, err)
 	assert.Equal(t, int64(100), pending.PendingWeight)
 	assert.Equal(t, currentMinute, pending.PendingSince)
+	summary, err := GetCodexQuotaAllocationSummary(user.Id)
+	require.NoError(t, err)
+	assert.Equal(t, int64(100), summary.EstimatedUsedUnits)
+	assert.Equal(t, int64(249_900), summary.RemainingUnits)
 	usedPercent.Store(11)
 
 	require.NoError(t, SyncCodexQuotaAllocation(context.Background()))

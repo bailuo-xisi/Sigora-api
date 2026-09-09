@@ -42,6 +42,8 @@ const UsersPage = () => {
     closeAddUser,
     closeEditUser,
     refresh,
+    selectedUsers,
+    setSelectedUsers,
 
     // Form state
     formInitValues,
@@ -61,6 +63,11 @@ const UsersPage = () => {
     // Translation
     t,
   } = usersData;
+
+  const handleBatchQuotaSuccess = async () => {
+    setSelectedUsers([]);
+    await refresh();
+  };
 
   return (
     <>
@@ -88,7 +95,12 @@ const UsersPage = () => {
         }
         actionsArea={
           <div className='flex flex-col md:flex-row justify-between items-center gap-2 w-full'>
-            <UsersActions setShowAddUser={setShowAddUser} t={t} />
+            <UsersActions
+              setShowAddUser={setShowAddUser}
+              selectedUsers={selectedUsers}
+              onBatchQuotaSuccess={handleBatchQuotaSuccess}
+              t={t}
+            />
 
             <UsersFilters
               formInitValues={formInitValues}

@@ -127,6 +127,12 @@ export interface ManageUserQuotaPayload {
   value: number
 }
 
+export interface BatchManageUserQuotaPayload {
+  ids: number[]
+  mode: QuotaAdjustMode
+  value: number
+}
+
 export interface CodexQuotaPolicyPayload {
   share_bps: number
 }

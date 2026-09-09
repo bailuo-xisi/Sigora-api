@@ -40,6 +40,7 @@ type CodexQuotaAllocationSummary struct {
 	AllocatedUnits     int64  `json:"allocated_units"`
 	UsedUnits          int64  `json:"used_units"`
 	SettledUsedUnits   int64  `json:"settled_used_units"`
+	EstimatedUsedUnits int64  `json:"estimated_used_units"`
 	RemainingUnits     int64  `json:"remaining_units"`
 	PendingWeight      int64  `json:"pending_weight"`
 	PendingSince       int64  `json:"pending_since"`
@@ -694,7 +695,12 @@ func GetCodexQuotaAllocationSummary(userId int) (*CodexQuotaAllocationSummary, e
 		}
 	}
 	allocated := pool.PoolCapacityUnits * int64(effective) / model.CodexQuotaMaxBps
-	remaining := allocated - used
+	// The upstream usage endpoint exposes a percentage and may update in coarse
+	// steps. Locally recorded request weights must reserve quota until the next
+	// upstream percentage delta is observed, otherwise both the UI and admission
+	// control can report the full allocation after successful requests.
+	estimatedUsed := used + pending.PendingWeight + pending.UnattributedWeight
+	remaining := allocated - estimatedUsed
 	if remaining < 0 {
 		remaining = 0
 	}
@@ -714,6 +720,7 @@ func GetCodexQuotaAllocationSummary(userId int) (*CodexQuotaAllocationSummary, e
 		AllocatedUnits:     allocated,
 		UsedUnits:          used,
 		SettledUsedUnits:   used,
+		EstimatedUsedUnits: estimatedUsed,
 		RemainingUnits:     remaining,
 		PendingWeight:      pending.PendingWeight,
 		PendingSince:       pending.PendingSince,

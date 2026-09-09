@@ -2,6 +2,7 @@
   "translation": {
     "Allocation preview": "Allocation preview",
     "Allocated units": "Allocated units",
+    "Estimated usage": "Estimated usage",
     "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.": "Each full upstream quota window equals 1,000,000 estimated units; these are not token counts.",
     "Estimated long-term quota pool": "Estimated long-term quota pool",
     "Estimated monthly quota pool": "Estimated monthly quota pool",
@@ -3247,6 +3248,8 @@
     "请选择过期时间": "Please select expiration time",
     "请选择通知方式": "Please select notification method",
     "调整额度": "Adjust Quota",
+    "批量调整额度": "Batch Adjust Quota",
+    "对选中的 {{count}} 个用户应用相同的额度调整。": "Apply the same quota adjustment to {{count}} selected users.",
     "调整额度成功": "Quota adjusted successfully",
     "调用次数": "Call Count",
     "调用次数分布": "Models call distribution",

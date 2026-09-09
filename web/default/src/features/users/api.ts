@@ -26,6 +26,7 @@ import type {
   UserFormData,
   ManageUserAction,
   ManageUserQuotaPayload,
+  BatchManageUserQuotaPayload,
   ApiResponse,
   CodexQuotaPolicyPayload,
   CodexQuotaBonusPayload,
@@ -125,6 +126,13 @@ export async function adjustUserQuota(
   payload: ManageUserQuotaPayload
 ): Promise<ApiResponse<Partial<User>>> {
   const res = await api.post('/api/user/manage', payload)
+  return res.data
+}
+
+export async function batchAdjustUserQuota(
+  payload: BatchManageUserQuotaPayload
+): Promise<ApiResponse<{ count: number }>> {
+  const res = await api.post('/api/user/batch/quota', payload)
   return res.data
 }
 
