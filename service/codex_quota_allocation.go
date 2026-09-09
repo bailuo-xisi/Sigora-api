@@ -360,8 +360,15 @@ func archiveCodexUsageWeights(tx *gorm.DB, byBucket map[codexUsageBucketKey]int6
 		if err := tx.Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "user_id"}, {Name: "account_hash"}},
 			DoUpdates: clause.Assignments(map[string]interface{}{
-				"weight": gorm.Expr("weight + ?", entry.Weight),
-				"since":  gorm.Expr("CASE WHEN since = 0 OR since > ? THEN ? ELSE since END", entry.Since, entry.Since),
+				"weight": gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "weight"}, entry.Weight),
+				"since": gorm.Expr(
+					"CASE WHEN ? = 0 OR ? > ? THEN ? ELSE ? END",
+					clause.Column{Table: clause.CurrentTable, Name: "since"},
+					clause.Column{Table: clause.CurrentTable, Name: "since"},
+					entry.Since,
+					entry.Since,
+					clause.Column{Table: clause.CurrentTable, Name: "since"},
+				),
 			}),
 		}).Create(&archive).Error; err != nil {
 			return err
@@ -633,7 +640,9 @@ func attributeCodexCycleDeltas(tx *gorm.DB, deltas []codexCycleDelta, weights []
 			usage := model.CodexUserCycleUsage{UserId: weights[index].UserId, CycleId: delta.CycleId, UsedUnits: amount}
 			if err := tx.Clauses(clause.OnConflict{
 				Columns:   []clause.Column{{Name: "user_id"}, {Name: "cycle_id"}},
-				DoUpdates: clause.Assignments(map[string]interface{}{"used_units": gorm.Expr("used_units + ?", amount)}),
+				DoUpdates: clause.Assignments(map[string]interface{}{
+					"used_units": gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "used_units"}, amount),
+				}),
 			}).Create(&usage).Error; err != nil {
 				return err
 			}

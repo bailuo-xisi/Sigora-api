@@ -140,7 +140,7 @@ func recordCodexUsageWeight(userId int, accountHash string, cycleIds []int64, ch
 					{Name: "bucket_minute"},
 				},
 				DoUpdates: clause.Assignments(map[string]interface{}{
-					column: gorm.Expr(column+" + ?", weight),
+					column: gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: column}, weight),
 				}),
 			}).Create(&row).Error; err != nil {
 				return err
@@ -170,8 +170,8 @@ func transitionCodexUsageWeight(userId int, accountHash string, cycleIds []int64
 				provisionalWeight,
 			)
 			result := filter.Updates(map[string]interface{}{
-				"weight":         gorm.Expr("weight + ?", finalWeight),
-				"pending_weight": gorm.Expr("pending_weight - ?", provisionalWeight),
+				"weight":         gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "weight"}, finalWeight),
+				"pending_weight": gorm.Expr("? - ?", clause.Column{Table: clause.CurrentTable, Name: "pending_weight"}, provisionalWeight),
 			})
 			if result.Error != nil {
 				return result.Error
