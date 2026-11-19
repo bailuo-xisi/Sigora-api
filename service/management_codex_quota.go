@@ -21,34 +21,34 @@ import (
 )
 
 const (
-	managementCodexQuotaDefaultBaseURL = "https://api.sigora.top"
-	managementCodexQuotaPath           = "/v0/management"
-	managementCodexQuotaCacheTTL       = 60 * time.Second
-	managementCodexQuotaHTTPTimeout    = 15 * time.Second
-	managementCodexQuotaMaxBodyBytes   = 4 << 20
-	managementCodexWhamUsageURL        = "https://chatgpt.com/backend-api/wham/usage"
+	managementQuotaDefaultBaseURL = "https://api.sigora.top"
+	managementQuotaPath           = "/v0/management"
+	managementQuotaCacheTTL       = 60 * time.Second
+	managementQuotaHTTPTimeout    = 15 * time.Second
+	managementQuotaMaxBodyBytes   = 4 << 20
+	managementCodexWhamUsageURL   = "https://chatgpt.com/backend-api/wham/usage"
 )
 
-type ManagementCodexQuotas struct {
-	Configured bool                       `json:"configured"`
-	Items      []ManagementCodexQuotaItem `json:"items"`
-	UpdatedAt  int64                      `json:"updated_at"`
+type ManagementQuotas struct {
+	Configured bool                  `json:"configured"`
+	Items      []ManagementQuotaItem `json:"items"`
+	UpdatedAt  int64                 `json:"updated_at"`
 }
 
-type ManagementCodexQuotaItem struct {
-	Name                                string                       `json:"name"`
-	AuthIndex                           string                       `json:"auth_index,omitempty"`
-	AccountHash                         string                       `json:"-"`
-	PlanType                            string                       `json:"plan_type,omitempty"`
-	SubscriptionActiveUntil             string                       `json:"subscription_active_until,omitempty"`
-	RateLimitResetCreditsAvailableCount *float64                     `json:"rate_limit_reset_credits_available_count,omitempty"`
-	Windows                             []ManagementCodexQuotaWindow `json:"windows"`
-	Error                               string                       `json:"error,omitempty"`
-	ErrorStatus                         int                          `json:"error_status,omitempty"`
-	UpdatedAt                           int64                        `json:"updated_at"`
+type ManagementQuotaItem struct {
+	Name                                string                  `json:"name"`
+	AuthIndex                           string                  `json:"auth_index,omitempty"`
+	AccountHash                         string                  `json:"-"`
+	PlanType                            string                  `json:"plan_type,omitempty"`
+	SubscriptionActiveUntil             string                  `json:"subscription_active_until,omitempty"`
+	RateLimitResetCreditsAvailableCount *float64                `json:"rate_limit_reset_credits_available_count,omitempty"`
+	Windows                             []ManagementQuotaWindow `json:"windows"`
+	Error                               string                  `json:"error,omitempty"`
+	ErrorStatus                         int                     `json:"error_status,omitempty"`
+	UpdatedAt                           int64                   `json:"updated_at"`
 }
 
-type ManagementCodexQuotaWindow struct {
+type ManagementQuotaWindow struct {
 	ID               string   `json:"id"`
 	WindowSeconds    *int64   `json:"window_seconds,omitempty"`
 	UsedPercent      *float64 `json:"used_percent,omitempty"`
@@ -57,20 +57,19 @@ type ManagementCodexQuotaWindow struct {
 	ResetAtDerived   bool     `json:"-"`
 }
 
-type managementCodexQuotaConfig struct {
+type managementQuotaConfig struct {
 	baseURL       string
 	managementURL string
 	key           string
 	concurrency   int
 }
 
-type managementCodexAuthFile struct {
+type managementQuotaAuthFile struct {
 	Name                    string
 	AuthIndex               string
 	AccountID               string
 	PlanType                string
 	SubscriptionActiveUntil string
-	Raw                     map[string]any
 }
 
 type managementAuthFilesResponse struct {
@@ -93,55 +92,63 @@ type managementAPICallResponse struct {
 	BodyTextCamel   string          `json:"bodyText"`
 }
 
-var managementCodexQuotaCache = struct {
+type managementQuotaCache struct {
 	sync.Mutex
 	key       string
 	expiresAt time.Time
-	data      *ManagementCodexQuotas
-}{}
-
-func GetManagementCodexQuotas(ctx context.Context) (*ManagementCodexQuotas, error) {
-	return getManagementCodexQuotas(ctx, false)
+	data      *ManagementQuotas
 }
 
-func RefreshManagementCodexQuotas(ctx context.Context) (*ManagementCodexQuotas, error) {
-	return getManagementCodexQuotas(ctx, true)
+var managementCodexQuotaCache, managementClaudeQuotaCache managementQuotaCache
+
+func GetManagementCodexQuotas(ctx context.Context) (*ManagementQuotas, error) {
+	return getManagementQuotas(ctx, "codex", false)
 }
 
-func getManagementCodexQuotas(ctx context.Context, force bool) (*ManagementCodexQuotas, error) {
-	cfg := getManagementCodexQuotaConfig()
+func RefreshManagementCodexQuotas(ctx context.Context) (*ManagementQuotas, error) {
+	return getManagementQuotas(ctx, "codex", true)
+}
+
+func getManagementQuotas(ctx context.Context, provider string, force bool) (*ManagementQuotas, error) {
+	cfg := getManagementQuotaConfig()
 	if cfg.key == "" {
-		return &ManagementCodexQuotas{
+		return &ManagementQuotas{
 			Configured: false,
-			Items:      []ManagementCodexQuotaItem{},
+			Items:      []ManagementQuotaItem{},
 			UpdatedAt:  time.Now().Unix(),
 		}, nil
 	}
 
+	cache := &managementCodexQuotaCache
+	fetchItem := fetchManagementCodexQuotaItem
+	if provider == "claude" {
+		cache = &managementClaudeQuotaCache
+		fetchItem = fetchManagementClaudeQuotaItem
+	}
 	cacheKey := cfg.managementURL + "|" + cfg.key
 	if !force {
-		if data := getCachedManagementCodexQuotas(cacheKey); data != nil {
+		if data := cache.get(cacheKey); data != nil {
 			return data, nil
 		}
 	}
 
-	client := getManagementCodexHTTPClient()
-	files, err := fetchManagementCodexAuthFiles(ctx, client, cfg)
+	client := getManagementQuotaHTTPClient()
+	files, err := fetchManagementQuotaAuthFiles(ctx, client, cfg, provider)
 	if err != nil {
 		return nil, err
 	}
 
-	result := &ManagementCodexQuotas{
+	result := &ManagementQuotas{
 		Configured: true,
-		Items:      fetchManagementCodexQuotaItems(ctx, client, cfg, files),
+		Items:      fetchManagementQuotaItems(ctx, client, cfg, files, fetchItem),
 		UpdatedAt:  time.Now().Unix(),
 	}
-	setCachedManagementCodexQuotas(cacheKey, result)
+	cache.set(cacheKey, result)
 	return result, nil
 }
 
-func getManagementCodexQuotaConfig() managementCodexQuotaConfig {
-	baseURL := strings.TrimRight(strings.TrimSpace(common.GetEnvOrDefaultString("SIGORA_QUOTA_MANAGEMENT_BASE_URL", managementCodexQuotaDefaultBaseURL)), "/")
+func getManagementQuotaConfig() managementQuotaConfig {
+	baseURL := strings.TrimRight(strings.TrimSpace(common.GetEnvOrDefaultString("SIGORA_QUOTA_MANAGEMENT_BASE_URL", managementQuotaDefaultBaseURL)), "/")
 	key := strings.TrimSpace(os.Getenv("SIGORA_QUOTA_MANAGEMENT_KEY"))
 	if key == "" {
 		key = strings.TrimSpace(os.Getenv("CLI_PROXY_MANAGEMENT_KEY"))
@@ -158,7 +165,7 @@ func getManagementCodexQuotaConfig() managementCodexQuotaConfig {
 		concurrency = 4
 	}
 
-	return managementCodexQuotaConfig{
+	return managementQuotaConfig{
 		baseURL:       baseURL,
 		managementURL: normalizeManagementURL(baseURL),
 		key:           key,
@@ -169,48 +176,46 @@ func getManagementCodexQuotaConfig() managementCodexQuotaConfig {
 func normalizeManagementURL(baseURL string) string {
 	trimmed := strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	if trimmed == "" {
-		trimmed = managementCodexQuotaDefaultBaseURL
+		trimmed = managementQuotaDefaultBaseURL
 	}
-	if strings.HasSuffix(trimmed, managementCodexQuotaPath) {
+	if strings.HasSuffix(trimmed, managementQuotaPath) {
 		return trimmed
 	}
-	return trimmed + managementCodexQuotaPath
+	return trimmed + managementQuotaPath
 }
 
-func getManagementCodexHTTPClient() *http.Client {
+func getManagementQuotaHTTPClient() *http.Client {
 	client := GetHttpClient()
 	if client == nil {
-		return &http.Client{Timeout: managementCodexQuotaHTTPTimeout}
+		return &http.Client{Timeout: managementQuotaHTTPTimeout}
 	}
 	clientCopy := *client
-	clientCopy.Timeout = managementCodexQuotaHTTPTimeout
+	clientCopy.Timeout = managementQuotaHTTPTimeout
 	return &clientCopy
 }
 
-func getCachedManagementCodexQuotas(cacheKey string) *ManagementCodexQuotas {
-	managementCodexQuotaCache.Lock()
-	defer managementCodexQuotaCache.Unlock()
+func (cache *managementQuotaCache) get(cacheKey string) *ManagementQuotas {
+	cache.Lock()
+	defer cache.Unlock()
 
-	if managementCodexQuotaCache.key == cacheKey &&
-		managementCodexQuotaCache.data != nil &&
-		time.Now().Before(managementCodexQuotaCache.expiresAt) {
-		return managementCodexQuotaCache.data
+	if cache.key == cacheKey && time.Now().Before(cache.expiresAt) {
+		return cache.data
 	}
 	return nil
 }
 
-func setCachedManagementCodexQuotas(cacheKey string, data *ManagementCodexQuotas) {
-	managementCodexQuotaCache.Lock()
-	defer managementCodexQuotaCache.Unlock()
+func (cache *managementQuotaCache) set(cacheKey string, data *ManagementQuotas) {
+	cache.Lock()
+	defer cache.Unlock()
 
-	managementCodexQuotaCache.key = cacheKey
-	managementCodexQuotaCache.data = data
-	managementCodexQuotaCache.expiresAt = time.Now().Add(managementCodexQuotaCacheTTL)
+	cache.key = cacheKey
+	cache.data = data
+	cache.expiresAt = time.Now().Add(managementQuotaCacheTTL)
 }
 
-func fetchManagementCodexAuthFiles(ctx context.Context, client *http.Client, cfg managementCodexQuotaConfig) ([]managementCodexAuthFile, error) {
+func fetchManagementQuotaAuthFiles(ctx context.Context, client *http.Client, cfg managementQuotaConfig, provider string) ([]managementQuotaAuthFile, error) {
 	var payload managementAuthFilesResponse
-	statusCode, err := managementCodexJSON(ctx, client, http.MethodGet, cfg.managementURL+"/auth-files", cfg.key, nil, &payload, managementCodexQuotaMaxBodyBytes)
+	statusCode, err := managementQuotaJSON(ctx, client, http.MethodGet, cfg.managementURL+"/auth-files", cfg.key, nil, &payload, managementQuotaMaxBodyBytes)
 	if err != nil {
 		if statusCode > 0 {
 			return nil, fmt.Errorf("management auth-files status %d: %w", statusCode, err)
@@ -218,25 +223,22 @@ func fetchManagementCodexAuthFiles(ctx context.Context, client *http.Client, cfg
 		return nil, err
 	}
 
-	files := make([]managementCodexAuthFile, 0)
+	files := make([]managementQuotaAuthFile, 0)
 	for _, raw := range payload.Files {
-		provider := normalizeManagementProvider(firstString(raw, "provider", "type"))
-		if provider != "codex" || firstBool(raw, "disabled") {
+		if normalizeManagementProvider(firstString(raw, "provider", "type")) != provider || firstBool(raw, "disabled") {
 			continue
 		}
 		name := firstString(raw, "name", "path")
 		if name == "" {
 			name = firstString(raw, "filename", "file")
 		}
-		authIndex := firstString(raw, "auth_index", "authIndex")
-		files = append(files, managementCodexAuthFile{
-			Name:                    name,
-			AuthIndex:               authIndex,
-			AccountID:               findCodexAccountID(raw),
-			PlanType:                findCodexPlanType(raw),
-			SubscriptionActiveUntil: findCodexSubscriptionActiveUntil(raw),
-			Raw:                     raw,
-		})
+		file := managementQuotaAuthFile{Name: name, AuthIndex: firstString(raw, "auth_index", "authIndex")}
+		if provider == "codex" {
+			file.AccountID = findCodexAccountID(raw)
+			file.PlanType = findCodexPlanType(raw)
+			file.SubscriptionActiveUntil = findCodexSubscriptionActiveUntil(raw)
+		}
+		files = append(files, file)
 	}
 
 	sort.SliceStable(files, func(i, j int) bool {
@@ -245,8 +247,8 @@ func fetchManagementCodexAuthFiles(ctx context.Context, client *http.Client, cfg
 	return files, nil
 }
 
-func fetchManagementCodexQuotaItems(ctx context.Context, client *http.Client, cfg managementCodexQuotaConfig, files []managementCodexAuthFile) []ManagementCodexQuotaItem {
-	items := make([]ManagementCodexQuotaItem, len(files))
+func fetchManagementQuotaItems(ctx context.Context, client *http.Client, cfg managementQuotaConfig, files []managementQuotaAuthFile, fetchItem func(context.Context, *http.Client, managementQuotaConfig, managementQuotaAuthFile) ManagementQuotaItem) []ManagementQuotaItem {
+	items := make([]ManagementQuotaItem, len(files))
 	workerCount := cfg.concurrency
 	if workerCount > len(files) {
 		workerCount = len(files)
@@ -262,7 +264,7 @@ func fetchManagementCodexQuotaItems(ctx context.Context, client *http.Client, cf
 		go func() {
 			defer wg.Done()
 			for index := range jobs {
-				items[index] = fetchManagementCodexQuotaItem(ctx, client, cfg, files[index])
+				items[index] = fetchItem(ctx, client, cfg, files[index])
 			}
 		}()
 	}
@@ -270,7 +272,7 @@ func fetchManagementCodexQuotaItems(ctx context.Context, client *http.Client, cf
 	for index := range files {
 		select {
 		case <-ctx.Done():
-			items[index] = failedManagementCodexQuotaItem(files[index], ctx.Err(), 0)
+			items[index] = failedManagementQuotaItem(files[index], ctx.Err(), 0)
 		case jobs <- index:
 		}
 	}
@@ -279,8 +281,8 @@ func fetchManagementCodexQuotaItems(ctx context.Context, client *http.Client, cf
 	return items
 }
 
-func fetchManagementCodexQuotaItem(ctx context.Context, client *http.Client, cfg managementCodexQuotaConfig, file managementCodexAuthFile) ManagementCodexQuotaItem {
-	item := ManagementCodexQuotaItem{
+func fetchManagementCodexQuotaItem(ctx context.Context, client *http.Client, cfg managementQuotaConfig, file managementQuotaAuthFile) ManagementQuotaItem {
+	item := ManagementQuotaItem{
 		Name:                    file.Name,
 		AuthIndex:               file.AuthIndex,
 		AccountHash:             hashCodexAccountID(file.AccountID),
@@ -309,20 +311,9 @@ func fetchManagementCodexQuotaItem(ctx context.Context, client *http.Client, cfg
 		Header:    headers,
 	}
 
-	var apiPayload managementAPICallResponse
-	statusCode, err := managementCodexJSON(ctx, client, http.MethodPost, cfg.managementURL+"/api-call", cfg.key, reqPayload, &apiPayload, managementCodexQuotaMaxBodyBytes)
-	if err != nil {
-		return failedManagementCodexQuotaItem(file, err, statusCode)
-	}
-
-	upstreamStatus := apiPayload.statusCode()
-	if upstreamStatus < http.StatusOK || upstreamStatus >= http.StatusMultipleChoices {
-		return failedManagementCodexQuotaItem(file, fmt.Errorf("upstream status %d", upstreamStatus), upstreamStatus)
-	}
-
 	var usage map[string]any
-	if err := apiPayload.decodeBody(&usage); err != nil {
-		return failedManagementCodexQuotaItem(file, err, upstreamStatus)
+	if status, err := fetchManagementQuotaUsage(ctx, client, cfg, reqPayload, &usage); err != nil {
+		return failedManagementQuotaItem(file, err, status)
 	}
 
 	if planType := normalizePlanType(firstString(usage, "plan_type", "planType")); planType != "" {
@@ -335,23 +326,33 @@ func fetchManagementCodexQuotaItem(ctx context.Context, client *http.Client, cfg
 	return item
 }
 
-func failedManagementCodexQuotaItem(file managementCodexAuthFile, err error, statusCode int) ManagementCodexQuotaItem {
-	item := ManagementCodexQuotaItem{
+func failedManagementQuotaItem(file managementQuotaAuthFile, err error, statusCode int) ManagementQuotaItem {
+	return ManagementQuotaItem{
 		Name:                    file.Name,
 		AuthIndex:               file.AuthIndex,
 		AccountHash:             hashCodexAccountID(file.AccountID),
 		PlanType:                file.PlanType,
 		SubscriptionActiveUntil: file.SubscriptionActiveUntil,
 		ErrorStatus:             statusCode,
+		Error:                   err.Error(),
 		UpdatedAt:               time.Now().Unix(),
 	}
-	if err != nil {
-		item.Error = err.Error()
-	}
-	return item
 }
 
-func managementCodexJSON(ctx context.Context, client *http.Client, method string, url string, managementKey string, payload any, dest any, maxBytes int64) (int, error) {
+func fetchManagementQuotaUsage(ctx context.Context, client *http.Client, cfg managementQuotaConfig, payload managementAPICallRequest, dest any) (int, error) {
+	var result managementAPICallResponse
+	status, err := managementQuotaJSON(ctx, client, http.MethodPost, cfg.managementURL+"/api-call", cfg.key, payload, &result, managementQuotaMaxBodyBytes)
+	if err != nil {
+		return status, err
+	}
+	status = result.statusCode()
+	if status < http.StatusOK || status >= http.StatusMultipleChoices {
+		return status, fmt.Errorf("upstream status %d", status)
+	}
+	return status, result.decodeBody(dest)
+}
+
+func managementQuotaJSON(ctx context.Context, client *http.Client, method string, url string, managementKey string, payload any, dest any, maxBytes int64) (int, error) {
 	var body io.Reader
 	if payload != nil {
 		data, err := common.Marshal(payload)
@@ -452,7 +453,7 @@ func rateLimitResetCreditsAvailableCount(usage map[string]any) (float64, bool) {
 	return numberField(credits, "available_count", "availableCount")
 }
 
-func buildManagementCodexQuotaWindows(usage map[string]any, now time.Time) []ManagementCodexQuotaWindow {
+func buildManagementCodexQuotaWindows(usage map[string]any, now time.Time) []ManagementQuotaWindow {
 	rateLimit := objectField(usage, "rate_limit", "rateLimit")
 	if rateLimit == nil {
 		return nil
@@ -462,7 +463,7 @@ func buildManagementCodexQuotaWindows(usage map[string]any, now time.Time) []Man
 	secondary := objectField(rateLimit, "secondary_window", "secondaryWindow")
 	fiveHour, weekly := selectCodexQuotaWindows(primary, secondary)
 
-	windows := make([]ManagementCodexQuotaWindow, 0, 2)
+	windows := make([]ManagementQuotaWindow, 0, 2)
 	if fiveHour != nil {
 		windows = append(windows, buildManagementCodexQuotaWindow("five-hour", fiveHour, rateLimit, now))
 	}
@@ -510,8 +511,8 @@ func sameCodexQuotaWindow(a map[string]any, b map[string]any) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-func buildManagementCodexQuotaWindow(id string, window map[string]any, rateLimit map[string]any, now time.Time) ManagementCodexQuotaWindow {
-	result := ManagementCodexQuotaWindow{ID: id}
+func buildManagementCodexQuotaWindow(id string, window map[string]any, rateLimit map[string]any, now time.Time) ManagementQuotaWindow {
+	result := ManagementQuotaWindow{ID: id}
 	if seconds, ok := numberField(window, "limit_window_seconds", "limitWindowSeconds"); ok {
 		rounded := int64(math.Round(seconds))
 		result.WindowSeconds = &rounded

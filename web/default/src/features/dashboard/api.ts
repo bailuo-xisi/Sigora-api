@@ -18,10 +18,11 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { api } from '@/lib/api'
 import type {
-  CodexQuotasResult,
   CodexQuotaAllocationResult,
   CodexQuotaPoolResult,
   QuotaDataItem,
+  UpstreamQuotaProvider,
+  UpstreamQuotasResult,
   UptimeGroupResult,
 } from './types'
 
@@ -84,16 +85,19 @@ export async function getCodexQuotaPool(): Promise<{
   return res.data
 }
 
-export async function getCodexQuotas(forceRefresh = false): Promise<{
+export async function getUpstreamQuotas(
+  provider: UpstreamQuotaProvider,
+  forceRefresh = false
+): Promise<{
   success: boolean
   message?: string
-  data?: CodexQuotasResult
+  data?: UpstreamQuotasResult
 }> {
   const res = await api.get<{
     success: boolean
     message?: string
-    data?: CodexQuotasResult
-  }>('/api/external/codex-quotas', {
+    data?: UpstreamQuotasResult
+  }>(`/api/external/${provider}-quotas`, {
     params: forceRefresh ? { refresh: 1 } : undefined,
     skipBusinessError: true,
     skipErrorHandler: true,

@@ -383,7 +383,7 @@ func observeCodexQuotaCycle(
 	tx *gorm.DB,
 	credentialHash string,
 	accountHash string,
-	window ManagementCodexQuotaWindow,
+	window ManagementQuotaWindow,
 	usedUnits int64,
 	now int64,
 	closedMinute int64,
@@ -472,7 +472,7 @@ func claimLegacyCodexQuotaCycle(
 	tx *gorm.DB,
 	credentialHash string,
 	accountHash string,
-	window ManagementCodexQuotaWindow,
+	window ManagementQuotaWindow,
 	usedUnits int64,
 	now int64,
 	closedMinute int64,
@@ -1014,7 +1014,7 @@ func ShouldUseCodexQuotaAllocation(c *gin.Context) bool {
 }
 
 func isCodexQuotaManagedProxyURL(rawBaseURL string) bool {
-	cfg := getManagementCodexQuotaConfig()
+	cfg := getManagementQuotaConfig()
 	if cfg.key == "" {
 		return false
 	}
@@ -1024,7 +1024,7 @@ func isCodexQuotaManagedProxyURL(rawBaseURL string) bool {
 }
 
 func codexQuotaSharedPoolHash() string {
-	cfg := getManagementCodexQuotaConfig()
+	cfg := getManagementQuotaConfig()
 	origin := codexQuotaURLOrigin(cfg.baseURL)
 	if origin == "" {
 		origin = "shared"

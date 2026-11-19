@@ -604,7 +604,7 @@ func TestObserveCodexQuotaCycleClaimsLegacyCycleWithoutResettingUsage(t *testing
 		IncludedCount:    1,
 	}).Error)
 
-	window := ManagementCodexQuotaWindow{ID: "weekly", ResetAt: &resetAt}
+	window := ManagementQuotaWindow{ID: "weekly", ResetAt: &resetAt}
 	observation, err := observeCodexQuotaCycle(
 		db,
 		hashCodexCredential("auth-legacy"),

@@ -320,6 +320,7 @@ func SetApiRouter(router *gin.Engine) {
 
 		externalRoute := apiRouter.Group("/external")
 		externalRoute.GET("/codex-quotas", middleware.UserAuth(), controller.GetExternalCodexQuotas)
+		externalRoute.GET("/claude-quotas", middleware.UserAuth(), controller.GetExternalClaudeQuotas)
 		externalRoute.GET("/codex-quota-allocation", middleware.UserAuth(), controller.GetSelfCodexQuotaAllocation)
 		externalRoute.GET("/codex-quota-pool", middleware.AdminAuth(), controller.GetCodexQuotaPool)
 

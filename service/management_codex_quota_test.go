@@ -200,7 +200,7 @@ func usedPercentForQuotaTest(authIndex string, window string) float64 {
 	return 13
 }
 
-func assertQuotaWindow(t *testing.T, window ManagementCodexQuotaWindow, id string, used float64, remaining float64) {
+func assertQuotaWindow(t *testing.T, window ManagementQuotaWindow, id string, used float64, remaining float64) {
 	t.Helper()
 	if window.ID != id {
 		t.Fatalf("expected window id %q, got %+v", id, window)
@@ -221,6 +221,6 @@ func resetManagementCodexQuotaCacheForTest() {
 	defer managementCodexQuotaCache.Unlock()
 
 	managementCodexQuotaCache.key = ""
-	managementCodexQuotaCache.expiresAt = managementCodexQuotaCache.expiresAt.Add(-managementCodexQuotaCacheTTL)
+	managementCodexQuotaCache.expiresAt = managementCodexQuotaCache.expiresAt.Add(-managementQuotaCacheTTL)
 	managementCodexQuotaCache.data = nil
 }

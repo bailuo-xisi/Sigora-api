@@ -33,7 +33,9 @@ export interface QuotaDataItem {
   quota?: number
 }
 
-export interface CodexQuotaWindow {
+export type UpstreamQuotaProvider = 'codex' | 'claude'
+
+export interface UpstreamQuotaWindow {
   id?: 'five-hour' | 'weekly' | 'monthly' | string
   label?: string
   window_seconds?: number | null
@@ -43,21 +45,21 @@ export interface CodexQuotaWindow {
   reset_at?: number | null
 }
 
-export interface CodexQuotaItem {
+export interface UpstreamQuotaItem {
   name: string
   auth_index?: string
   plan_type?: string
   subscription_active_until?: string
   rate_limit_reset_credits_available_count?: number | null
-  windows: CodexQuotaWindow[]
+  windows: UpstreamQuotaWindow[] | null
   error?: string
   error_status?: number
   updated_at?: number
 }
 
-export interface CodexQuotasResult {
+export interface UpstreamQuotasResult {
   configured?: boolean
-  items: CodexQuotaItem[]
+  items: UpstreamQuotaItem[]
   updated_at: number
 }
 

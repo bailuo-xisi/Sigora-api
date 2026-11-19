@@ -16,8 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { Gauge, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -29,21 +28,25 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   getCodexQuotaAllocation,
   getCodexQuotaPool,
-  getCodexQuotas,
+  getUpstreamQuotas,
 } from '@/features/dashboard/api'
 import type {
   CodexQuotaAllocationResult,
-  CodexQuotaItem,
-  CodexQuotaWindow,
+  UpstreamQuotaItem,
+  UpstreamQuotaProvider,
+  UpstreamQuotaWindow,
 } from '@/features/dashboard/types'
 
 const CODEX_PENDING_REFETCH_INTERVAL = 30 * 1000
 const CODEX_ALLOCATION_REFETCH_INTERVAL = 60 * 1000
-const CODEX_QUOTAS_QUERY_KEY = ['dashboard', 'overview', 'codex-quotas']
 
-function getQuotaWindowLabel(t: TFunction, window: CodexQuotaWindow) {
+function getQuotaWindowLabel(t: TFunction, window: UpstreamQuotaWindow) {
   if (window.id === 'five-hour') return t('5-hour quota')
   if (window.id === 'weekly') return t('Weekly quota')
+  if (window.id === 'weekly-opus')
+    return t('Weekly quota ({{scope}})', { scope: 'Opus' })
+  if (window.id === 'weekly-sonnet')
+    return t('Weekly quota ({{scope}})', { scope: 'Sonnet' })
   if (window.id === 'monthly') return t('Monthly quota')
   return window.label || window.id || t('Quota')
 }
@@ -109,7 +112,7 @@ function getQuotaBarColor(remaining?: number | null) {
   return '#10b981'
 }
 
-function CodexQuotaWindowRow(props: { window: CodexQuotaWindow }) {
+function QuotaWindowRow(props: { window: UpstreamQuotaWindow }) {
   const { t } = useTranslation()
   const remaining =
     props.window.remaining_percent === null ||
@@ -161,9 +164,9 @@ function CodexQuotaWindowRow(props: { window: CodexQuotaWindow }) {
   )
 }
 
-function CodexQuotaItemView(props: {
-  item: CodexQuotaItem
-  itemIndex: number
+function QuotaItemView(props: {
+  item: UpstreamQuotaItem
+  emptyMessage: string
 }) {
   const { t } = useTranslation()
 
@@ -173,25 +176,22 @@ function CodexQuotaItemView(props: {
         <div className='text-destructive truncate text-xs'>
           {t('Quota unavailable')}
         </div>
-      ) : props.item.windows.length > 0 ? (
+      ) : props.item.windows?.length ? (
         <div className='flex flex-col gap-2'>
           {props.item.windows.map((window) => (
-            <CodexQuotaWindowRow
-              key={`${props.itemIndex}-${window.id}`}
-              window={window}
-            />
+            <QuotaWindowRow key={window.id} window={window} />
           ))}
         </div>
       ) : (
         <div className='text-muted-foreground truncate text-xs'>
-          {t('No Codex quota data')}
+          {props.emptyMessage}
         </div>
       )}
     </div>
   )
 }
 
-function CodexQuotaSkeleton() {
+function QuotaSkeleton() {
   return (
     <div className='flex flex-col gap-2'>
       <Skeleton className='h-4 w-24' />
@@ -200,14 +200,23 @@ function CodexQuotaSkeleton() {
   )
 }
 
-export function CodexQuotaOverview() {
+export function UpstreamQuotaOverview(props: {
+  provider: UpstreamQuotaProvider
+}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const isAdmin = (useAuthStore((state) => state.auth.user?.role) || 0) >= 10
-  const [isManualRefreshInFlight, setIsManualRefreshInFlight] = useState(false)
+  const isCodex = props.provider === 'codex'
+  const showPool = isCodex && isAdmin
+  const queryKey = ['dashboard', 'overview', `${props.provider}-quotas`]
+  const title = isCodex ? t('Codex quota') : t('Claude quota')
+  const emptyMessage = isCodex
+    ? t('No Codex quota data')
+    : t('No Claude quota data')
   const allocationQuery = useQuery({
     queryKey: ['dashboard', 'overview', 'codex-quota-allocation'],
     queryFn: getCodexQuotaAllocation,
+    enabled: isCodex,
     retry: false,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
@@ -216,77 +225,61 @@ export function CodexQuotaOverview() {
         ? CODEX_ALLOCATION_REFETCH_INTERVAL
         : false,
   })
-  const allocation = allocationQuery.data?.success
-    ? allocationQuery.data.data
-    : undefined
+  const allocation =
+    isCodex && allocationQuery.data?.success
+      ? allocationQuery.data.data
+      : undefined
   const estimatedUsedUnits = allocation ? getEstimatedUsedUnits(allocation) : 0
   const pendingSettlementWeight = allocation
     ? allocation.pending_weight + (allocation.awaiting_sync_weight ?? 0)
     : 0
   const hasPendingSettlement = pendingSettlementWeight > 0
+  let refetchInterval: number | false = false
+  if (allocation?.enabled) refetchInterval = CODEX_ALLOCATION_REFETCH_INTERVAL
+  else if (hasPendingSettlement)
+    refetchInterval = CODEX_PENDING_REFETCH_INTERVAL
+
   const query = useQuery({
-    queryKey: CODEX_QUOTAS_QUERY_KEY,
-    queryFn: () => getCodexQuotas(),
+    queryKey,
+    queryFn: () => getUpstreamQuotas(props.provider),
     retry: false,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchInterval: allocation?.enabled
-      ? CODEX_ALLOCATION_REFETCH_INTERVAL
-      : hasPendingSettlement
-        ? CODEX_PENDING_REFETCH_INTERVAL
-        : false,
+    refetchInterval,
   })
   const poolQuery = useQuery({
     queryKey: ['dashboard', 'overview', 'codex-quota-pool'],
     queryFn: getCodexQuotaPool,
-    enabled: isAdmin,
+    enabled: showPool,
     retry: false,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchInterval: allocation?.enabled
-      ? CODEX_ALLOCATION_REFETCH_INTERVAL
-      : hasPendingSettlement
-        ? CODEX_PENDING_REFETCH_INTERVAL
-        : false,
+    refetchInterval,
   })
   const pool = poolQuery.data?.success ? poolQuery.data.data : undefined
+  const refresh = useMutation({
+    mutationFn: () => getUpstreamQuotas(props.provider, true),
+    onSuccess: async (result) => {
+      queryClient.setQueryData(queryKey, result)
+      if (isCodex) await allocationQuery.refetch()
+      if (showPool) await poolQuery.refetch()
+    },
+  })
   const isRefreshing =
-    isManualRefreshInFlight ||
+    refresh.isPending ||
     query.isFetching ||
-    allocationQuery.isFetching ||
-    (isAdmin && poolQuery.isFetching)
-
-  const handleRefresh = async () => {
-    if (isRefreshing) return
-
-    setIsManualRefreshInFlight(true)
-    try {
-      const quotaResult = await getCodexQuotas(true)
-      queryClient.setQueryData(CODEX_QUOTAS_QUERY_KEY, quotaResult)
-
-      await allocationQuery.refetch()
-      if (isAdmin) {
-        await poolQuery.refetch()
-      }
-    } finally {
-      setIsManualRefreshInFlight(false)
-    }
-  }
-
+    (isCodex && allocationQuery.isFetching) ||
+    (showPool && poolQuery.isFetching)
   const items = query.data?.success ? (query.data.data?.items ?? []) : []
-  const message =
-    query.error instanceof Error
-      ? query.error.message
-      : query.data?.success === false
-        ? query.data.message
-        : ''
+  const isUnavailable =
+    refresh.isError || query.isError || query.data?.success === false
 
   return (
     <div className='bg-background/60 flex flex-col gap-2 rounded-lg px-2.5 py-2'>
       <div className='flex items-center justify-between gap-2'>
         <div className='text-muted-foreground flex min-w-0 items-center gap-1.5 text-[11px] leading-none font-medium'>
           <Gauge className='size-3 shrink-0' aria-hidden='true' />
-          <span className='truncate'>{t('Codex quota')}</span>
+          <span className='truncate'>{title}</span>
         </div>
         <div className='flex shrink-0 items-center gap-1'>
           {items.length > 0 ? (
@@ -296,10 +289,10 @@ export function CodexQuotaOverview() {
             type='button'
             variant='ghost'
             size='sm'
-            onClick={handleRefresh}
+            onClick={() => refresh.mutate()}
             disabled={isRefreshing}
             className='size-7 p-0'
-            aria-label={t('Refresh')}
+            aria-label={`${title}: ${t('Refresh')}`}
             title={t('Refresh')}
           >
             <RefreshCw
@@ -389,7 +382,7 @@ export function CodexQuotaOverview() {
         </>
       ) : null}
 
-      {isAdmin && pool ? (
+      {showPool && pool ? (
         <div className='border-border/70 grid grid-cols-2 gap-2 rounded-lg border px-2.5 py-2 text-center text-xs'>
           <div>
             <div className='text-muted-foreground'>
@@ -429,25 +422,29 @@ export function CodexQuotaOverview() {
       ) : null}
 
       {query.isLoading ? (
-        <CodexQuotaSkeleton />
+        <QuotaSkeleton />
+      ) : isUnavailable ? (
+        <div className='text-muted-foreground text-xs'>
+          {isCodex ? t('Codex quota unavailable') : t('Quota unavailable')}
+        </div>
       ) : query.data?.success && query.data.data?.configured === false ? (
         <div className='text-muted-foreground text-xs'>
-          {t('Codex quota not configured')}
-        </div>
-      ) : message ? (
-        <div className='text-muted-foreground text-xs'>
-          {t('Codex quota unavailable')}
+          {isCodex
+            ? t('Codex quota not configured')
+            : t('Claude quota not configured')}
         </div>
       ) : items.length > 0 ? (
         <div className='flex max-h-64 flex-col gap-2 overflow-y-auto pr-1'>
           {items.map((item, index) => (
-            <CodexQuotaItemView key={index} item={item} itemIndex={index} />
+            <QuotaItemView
+              key={index}
+              item={item}
+              emptyMessage={emptyMessage}
+            />
           ))}
         </div>
       ) : (
-        <div className='text-muted-foreground text-xs'>
-          {t('No Codex quota data')}
-        </div>
+        <div className='text-muted-foreground text-xs'>{emptyMessage}</div>
       )}
     </div>
   )

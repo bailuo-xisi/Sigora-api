@@ -78,6 +78,10 @@ const formatResetTime = (value) => {
 const getWindowLabel = (t, window) => {
   if (window.id === 'five-hour') return t('5-hour quota');
   if (window.id === 'weekly') return t('Weekly quota');
+  if (window.id === 'weekly-opus')
+    return t('Weekly quota ({{scope}})', { scope: 'Opus' });
+  if (window.id === 'weekly-sonnet')
+    return t('Weekly quota ({{scope}})', { scope: 'Sonnet' });
   if (window.id === 'monthly') return t('Monthly quota');
   return window.label || window.id || t('Quota');
 };
@@ -96,7 +100,7 @@ const getQuotaBarColor = (remaining) => {
   return '#10b981';
 };
 
-const CodexQuotaWindowRow = ({ quotaWindow, t }) => {
+const QuotaWindowRow = ({ quotaWindow, t }) => {
   const remaining = clampPercent(quotaWindow.remaining_percent);
   const resetTime = formatResetTime(quotaWindow.reset_at);
 
@@ -142,7 +146,7 @@ const CodexQuotaWindowRow = ({ quotaWindow, t }) => {
   );
 };
 
-const CodexQuotaItem = ({ item, itemIndex, t }) => {
+const QuotaItem = ({ item, emptyMessage, t }) => {
   return (
     <div className='rounded-xl border border-gray-100 bg-white p-3 shadow-sm'>
       {item.error ? (
@@ -153,50 +157,60 @@ const CodexQuotaItem = ({ item, itemIndex, t }) => {
       ) : item.windows && item.windows.length > 0 ? (
         <div className='space-y-3'>
           {item.windows.map((quotaWindow) => (
-            <CodexQuotaWindowRow
-              key={`${itemIndex}-${quotaWindow.id}`}
+            <QuotaWindowRow
+              key={quotaWindow.id}
               quotaWindow={quotaWindow}
               t={t}
             />
           ))}
         </div>
       ) : (
-        <div className='text-xs text-gray-500'>{t('No Codex quota data')}</div>
+        <div className='text-xs text-gray-500'>{emptyMessage}</div>
       )}
     </div>
   );
 };
 
-const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
+const UpstreamQuotaPanel = ({ provider, CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
   const [loading, setLoading] = useState(true);
   const [quotaData, setQuotaData] = useState(null);
   const [allocationData, setAllocationData] = useState(null);
   const [poolData, setPoolData] = useState(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(false);
   const refreshInFlightRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
+  const isCodex = provider === 'codex';
+  const showPool = isCodex && isAdmin();
+  const title = isCodex ? t('Codex quota') : t('Claude quota');
+  const emptyMessage = isCodex
+    ? t('No Codex quota data')
+    : t('No Claude quota data');
 
-  const loadCodexQuotas = useCallback(
+  const loadQuotas = useCallback(
     async (forceRefresh = false) => {
       if (refreshInFlightRef.current) {
         return;
       }
       refreshInFlightRef.current = true;
       setRefreshing(true);
-      setError('');
+      setError(false);
       try {
         const requests = [
-          API.get('/api/external/codex-quotas', {
+          API.get(`/api/external/${provider}-quotas`, {
             params: forceRefresh ? { refresh: 1 } : undefined,
             disableDuplicate: true,
             skipErrorHandler: true,
           }),
-          API.get('/api/external/codex-quota-allocation', {
-            disableDuplicate: true,
-            skipErrorHandler: true,
-          }),
         ];
-        if (isAdmin()) {
+        if (isCodex) {
+          requests.push(
+            API.get('/api/external/codex-quota-allocation', {
+              disableDuplicate: true,
+              skipErrorHandler: true,
+            }),
+          );
+        }
+        if (showPool) {
           requests.push(
             API.get('/api/external/codex-quota-pool', {
               disableDuplicate: true,
@@ -213,16 +227,11 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
         ) {
           setQuotaData(quotaResult.value.data.data);
         } else {
-          const message =
-            quotaResult.status === 'fulfilled'
-              ? quotaResult.value.data.message
-              : quotaResult.reason?.response?.data?.message ||
-                quotaResult.reason?.message;
           setQuotaData(null);
-          setError(message || t('Codex quota unavailable'));
+          setError(true);
         }
         if (
-          allocationResult.status === 'fulfilled' &&
+          allocationResult?.status === 'fulfilled' &&
           allocationResult.value.data.success
         ) {
           setAllocationData(allocationResult.value.data.data);
@@ -238,19 +247,19 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
         setRefreshing(false);
       }
     },
-    [t],
+    [provider, isCodex, showPool],
   );
 
   useEffect(() => {
-    loadCodexQuotas();
-  }, [loadCodexQuotas]);
+    loadQuotas();
+  }, [loadQuotas]);
 
   useEffect(() => {
     if (!allocationData?.enabled) {
       return undefined;
     }
     const timer = window.setInterval(
-      loadCodexQuotas,
+      loadQuotas,
       allocationData.pending_weight > 0 ||
         allocationData.awaiting_sync_weight > 0
         ? CODEX_PENDING_REFRESH_INTERVAL
@@ -261,7 +270,7 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
     allocationData?.enabled,
     allocationData?.pending_weight,
     allocationData?.awaiting_sync_weight,
-    loadCodexQuotas,
+    loadQuotas,
   ]);
 
   const items = quotaData?.items || [];
@@ -278,16 +287,16 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
         <div className='flex items-center justify-between w-full gap-2'>
           <div className={FLEX_CENTER_GAP2}>
             <Gauge size={16} />
-            {t('Codex quota')}
+            {title}
           </div>
           <Button
             icon={<RefreshCw size={14} />}
-            onClick={() => loadCodexQuotas(true)}
+            onClick={() => loadQuotas(true)}
             loading={refreshing}
             size='small'
             theme='borderless'
             type='tertiary'
-            aria-label={t('Refresh')}
+            aria-label={`${title}: ${t('Refresh')}`}
             className='text-gray-500 hover:text-blue-500 hover:bg-blue-50 !rounded-full'
           />
         </div>
@@ -371,7 +380,7 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
           </div>
         )}
 
-        {isAdmin() && poolData && (
+        {showPool && poolData && (
           <div className='mb-3 grid grid-cols-2 gap-2 rounded-xl border border-gray-100 p-2 text-center text-xs'>
             <div>
               <div className='text-gray-500'>
@@ -423,20 +432,22 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
           />
         ) : quotaData?.configured === false ? (
           <div className='rounded-xl bg-gray-50 p-3 text-sm text-gray-500'>
-            {t('Codex quota not configured')}
+            {isCodex
+              ? t('Codex quota not configured')
+              : t('Claude quota not configured')}
           </div>
         ) : error ? (
           <div className='rounded-xl bg-red-50 p-3 text-sm text-red-500'>
-            {t('Codex quota unavailable')}
+            {isCodex ? t('Codex quota unavailable') : t('Quota unavailable')}
           </div>
         ) : items.length > 0 ? (
           <ScrollableContainer maxHeight='20rem'>
             <div className='space-y-3'>
               {items.map((item, index) => (
-                <CodexQuotaItem
+                <QuotaItem
                   key={index}
                   item={item}
-                  itemIndex={index}
+                  emptyMessage={emptyMessage}
                   t={t}
                 />
               ))}
@@ -444,7 +455,7 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
           </ScrollableContainer>
         ) : (
           <div className='rounded-xl bg-gray-50 p-3 text-sm text-gray-500'>
-            {t('No Codex quota data')}
+            {emptyMessage}
           </div>
         )}
       </div>
@@ -452,4 +463,4 @@ const CodexQuotaPanel = ({ CARD_PROPS, FLEX_CENTER_GAP2, t }) => {
   );
 };
 
-export default CodexQuotaPanel;
+export default UpstreamQuotaPanel;

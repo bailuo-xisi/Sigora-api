@@ -26,7 +26,7 @@ import DashboardHeader from './DashboardHeader';
 import StatsCards from './StatsCards';
 import ChartsPanel from './ChartsPanel';
 import ApiInfoPanel from './ApiInfoPanel';
-import CodexQuotaPanel from './CodexQuotaPanel';
+import UpstreamQuotaPanel from './UpstreamQuotaPanel';
 import AnnouncementsPanel from './AnnouncementsPanel';
 import FaqPanel from './FaqPanel';
 import UptimePanel from './UptimePanel';
@@ -208,7 +208,14 @@ const Dashboard = () => {
 
           {hasDashboardSidePanel && (
             <div className='flex flex-col gap-4'>
-              <CodexQuotaPanel
+              <UpstreamQuotaPanel
+                provider='codex'
+                CARD_PROPS={CARD_PROPS}
+                FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
+                t={dashboardData.t}
+              />
+              <UpstreamQuotaPanel
+                provider='claude'
                 CARD_PROPS={CARD_PROPS}
                 FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
                 t={dashboardData.t}
